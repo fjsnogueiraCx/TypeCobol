@@ -383,11 +383,11 @@ namespace TypeCobol.LanguageServer
         /// </summary>
         /// <param name="fileUri">File URI to be send to the client</param>
         /// <param name="missingCopies">List of missing copies name</param>
-        private void MissingCopiesDetected(object fileUri, List<string> missingCopies)
+        private void MissingCopiesDetected(object fileUri, MissingCopiesEventArgs missingCopiesEvent)
         {
             //Send missing copies to client
             var missingCopiesParam = new MissingCopiesParams();
-            missingCopiesParam.Copies = missingCopies;
+            missingCopiesParam.Copies = missingCopiesEvent.Copies;
             missingCopiesParam.textDocument = new TextDocumentIdentifier(fileUri.ToString());
 
             SendMissingCopies(missingCopiesParam);
@@ -398,12 +398,12 @@ namespace TypeCobol.LanguageServer
         /// </summary>
         /// <param name="fileUri">File URI to be send to the client</param>
         /// <param name="diagnostics">List of TypeCobol compiler diagnostics</param>
-        private void DiagnosticsDetected(object fileUri, IEnumerable<Compiler.Diagnostics.Diagnostic> diagnostics)
+        private void DiagnosticsDetected(object fileUri, DiagnosticsEnventArgs diagnosticsEvent)
         {
             var diagParameter = new PublishDiagnosticsParams();
             var diagList = new List<Diagnostic>();
 
-            foreach (var diag in diagnostics)
+            foreach (var diag in diagnosticsEvent.Diagnostics)
             {
                 diagList.Add(new Diagnostic(new Range(diag.Line, diag.ColumnStart, diag.Line, diag.ColumnEnd), diag.Message, (DiagnosticSeverity)diag.Info.Severity, diag.Info.Code.ToString(), diag.Info.ReferenceText));
             }
@@ -413,9 +413,9 @@ namespace TypeCobol.LanguageServer
             SendDiagnostics(diagParameter);
         }
 
-        private void LoadingIssueDetected(object sender, string message)
+        private void LoadingIssueDetected(object sender, LoadingIssueEventArgs LoadingIssueEvent)
         {
-            SendLoadingIssue(new LoadingIssueParams() { Message = message });
+            SendLoadingIssue(new LoadingIssueParams() { Message = LoadingIssueEvent.Message });
         }
 
         #region Completion Methods
@@ -724,7 +724,7 @@ namespace TypeCobol.LanguageServer
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void CompilationResultsForProgram_ProgramClassNotChanged(object sender, int e)
+        private void CompilationResultsForProgram_ProgramClassNotChanged(object sender, ProgramClassEventArgs e)
         {
             System.Threading.Interlocked.Exchange(ref m_unchanged, 1);
         }

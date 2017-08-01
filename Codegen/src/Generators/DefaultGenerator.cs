@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using TypeCobol.Codegen.Nodes;
 using TypeCobol.Codegen.Skeletons;
@@ -47,7 +48,7 @@ namespace TypeCobol.Codegen.Generators
             LinearNodeSourceCodeMapper mapper = new LinearNodeSourceCodeMapper(this);
             mapper.Accept(RootNode);
             //mapper.DebugDump();
-            SourceText generatedDocument = LinearGeneration(mapper, CompilationResults.TokensLines);
+            SourceText generatedDocument = LinearGeneration(mapper, CompilationResults.TokensLines.ToList());
             // Step 3: Write target document
             //TCCODEGEN_NO_TRAILING_SPACES
             generatedDocument.Write(Destination);

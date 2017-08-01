@@ -241,7 +241,7 @@ namespace TypeCobol.Compiler
         /// Current list of text lines.
         /// NOT thread-safe : this property can only be accessed from the owner thread.
         /// </summary>
-        public IReadOnlyList<ICobolTextLine> CobolTextLines
+        public Tools.IReadOnlyList<ICobolTextLine> CobolTextLines
         {
             get
             {
@@ -407,7 +407,7 @@ namespace TypeCobol.Compiler
         /// Current list of tokens lines.
         /// NOT thread-safe : can only be accessed from the owner thread.
         /// </summary>
-        public IReadOnlyList<ITokensLine> TokensLines
+        public Tools.IReadOnlyList<ITokensLine> TokensLines
         {
             get
             {

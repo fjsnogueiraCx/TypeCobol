@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using TypeCobol.Compiler.Directives;
 using TypeCobol.Compiler.Scanner;
 using TypeCobol.Compiler.Text;
+using TypeCobol.Tools;
 
 namespace TypeCobol.Compiler.Preprocessor
 {

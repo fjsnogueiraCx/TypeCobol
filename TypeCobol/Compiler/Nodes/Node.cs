@@ -39,7 +39,7 @@ namespace TypeCobol.Compiler.Nodes {
         /// <see cref="Remove" />
         /// methods.
         public IReadOnlyList<Node> Children {
-            get { return children; }
+            get { return new ReadOnlyList<Node>(children); }
         }
 
         /// <summary>
@@ -561,7 +561,7 @@ namespace TypeCobol.Compiler.Nodes {
             // if the performance is better or if it avoids a copy.
             var result = new List<C>();
             foreach (var child in node.Children) result.Add((C) child);
-            return result.AsReadOnly();
+            return new ReadOnlyList<C>(result);
         }
     }
 

@@ -21,6 +21,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using TypeCobol.Tools;
 
 namespace TypeCobol.Compiler.Concurrency
 {
@@ -6359,7 +6360,7 @@ namespace TypeCobol.Compiler.Concurrency
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal bool IsOwned<TCaller>(ref TCaller caller)
             where TCaller : struct, ISecurePooledObjectUser
         {

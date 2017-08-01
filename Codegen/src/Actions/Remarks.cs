@@ -46,7 +46,7 @@ namespace TypeCobol.Codegen.Actions
                 return; //We dont have to care about nested program. It prevents from generating REMARKS directive multiple times
 
             //Get tokensLine
-            var tokensLines = (CompilationDocument.CobolTextLines as IReadOnlyList<Compiler.Scanner.TokensLine>);
+            var tokensLines = (CompilationDocument.CobolTextLines as Tools.IReadOnlyList<Compiler.Scanner.TokensLine>);
 
             //Get all the CopyTextNameVariations
             var copys = CompilationDocument.CopyTextNamesVariations;

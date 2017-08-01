@@ -208,15 +208,15 @@ namespace TypeCobol.Compiler
             }
 
             // Send events to all listeners
-            EventHandler<int> programClassChanged = ProgramClassChanged; // avoid race condition
-            EventHandler<int> programClassNotChanged = ProgramClassNotChanged;
+            EventHandler<ProgramClassEventArgs> programClassChanged = ProgramClassChanged; // avoid race condition
+            EventHandler<ProgramClassEventArgs> programClassNotChanged = ProgramClassNotChanged;
             if (snapshotWasUpdated && programClassChanged != null)
             {
-                programClassChanged(this, ProgramClassDocumentSnapshot.CurrentVersion);
+                programClassChanged(this, new ProgramClassEventArgs() {Version = ProgramClassDocumentSnapshot.CurrentVersion });
             }
             else if (!snapshotWasUpdated && programClassNotChanged != null)
             {
-                programClassNotChanged(this, ProgramClassDocumentSnapshot.CurrentVersion);
+                programClassNotChanged(this, new ProgramClassEventArgs() { Version = ProgramClassDocumentSnapshot.CurrentVersion });
             }
         }
 
@@ -262,13 +262,13 @@ namespace TypeCobol.Compiler
         /// <summary>
         /// Subscribe to this event to be notified of all changes in the complete program or class view of the document
         /// </summary>
-        public event EventHandler<int> ProgramClassChanged;
+        public event EventHandler<ProgramClassEventArgs> ProgramClassChanged;
 
         /// <summary>
         /// Subscribe to this event to be notified when no changes in the complete program or class view of the document has been
         /// detected after a snapshot refresh.
         /// </summary>
-        public event EventHandler<int> ProgramClassNotChanged;
+        public event EventHandler<ProgramClassEventArgs> ProgramClassNotChanged;
 
         /// <summary>
         /// Performance stats for the RefreshProgramClassDocumentSnapshot method
@@ -282,5 +282,10 @@ namespace TypeCobol.Compiler
         protected readonly object lockObjectForProgramClassDocumentSnapshot = new object();
 
         #endregion
+    }
+
+    public class ProgramClassEventArgs : EventArgs
+    {
+        public int Version { get; set; }
     }
 }
