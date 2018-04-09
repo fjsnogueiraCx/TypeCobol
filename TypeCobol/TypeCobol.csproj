@@ -109,6 +109,7 @@
   <ItemGroup>
     <None Include="App.config" />
     <EmbeddedResource Include="Compiler\Diagnostics\Resources\DiagnosticMessages.csv" />
+    <None Include="Compiler\CupParser\TypeCobolProgram.cup" />
     <None Include="Documentation\Architecture\Initial requirements.docx" />
     <None Include="Documentation\Architecture\TypeCobolStats_14_04_2015.xlsx" />
     <None Include="Documentation\Reference\DB2 11 for zOs - Application Programming and SQL Guide.pdf" />
@@ -175,6 +176,12 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+  <PropertyGroup>
+    <PreBuildEvent>$(OutDir)\CSCup.exe -expect 2000 -parser TypeCobolProgramParser -symbols TypeCobolProgramSymbols $(ProjectDir)\Compiler\CupParser\TypeCobolProgram.cup
+COPY $(TargetDir)TypeCobolProgramParser.cs $(ProjectDir)\Compiler\CupParser\
+COPY $(TargetDir)TypeCobolProgramSymbols.cs $(ProjectDir)\Compiler\CupParser\
+</PreBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
