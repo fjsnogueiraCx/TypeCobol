@@ -7,6 +7,16 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using TypeCobol.Compiler.CodeElements;
+using TypeCobol.Compiler.CupParser.NodeBuilder;
+
+action code {:
+	public IProgramClassBuilder Builder
+	{
+		get;
+		set;
+	}
+:};
+
 
 /* Terminals (tokens returned by the scanner). */
 terminal TypeCobol.Compiler.CodeElements.ProgramIdentification ProgramIdentification;
@@ -259,6 +269,7 @@ cobolProgram ::=
 
 cobolProgramBase ::=
 	programAttributes:pas
+	{: :}
 	environmentDivisionOpt:ed
 	dataDivisionOpt:dv
 	procedureDivisionOpt:pdiv
