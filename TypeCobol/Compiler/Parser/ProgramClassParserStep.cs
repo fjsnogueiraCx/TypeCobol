@@ -69,9 +69,9 @@ namespace TypeCobol.Compiler.Parser
             ParseTreeWalker walker = new ParseTreeWalker();
             CobolNodeBuilder programClassBuilder = new CobolNodeBuilder();
             diagnostics = new List<Diagnostic>();
-            programClassBuilder.SyntaxTree = new SyntaxTree(); //Initializie SyntaxTree for the current source file
+            programClassBuilder.SyntaxTree = new SyntaxTree<ParserRuleContext>(); //Initializie SyntaxTree for the current source file
 			programClassBuilder.CustomSymbols = customSymbols;
-            programClassBuilder.Dispatcher = new NodeDispatcher();
+            programClassBuilder.Dispatcher = new NodeDispatcher<ParserRuleContext>();
             programClassBuilder.Dispatcher.CreateListeners();
 
             perfStatsForParserInvocation.OnStartTreeBuilding();

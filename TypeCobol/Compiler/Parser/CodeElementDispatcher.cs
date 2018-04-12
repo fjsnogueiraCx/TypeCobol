@@ -48,8 +48,11 @@ namespace TypeCobol.Compiler.Parser
     }
 
 
-
-	public interface NodeListener {
+    /// <summary>
+    /// Node Listener with a parsing context
+    /// </summary>
+    /// <typeparam name="TCtx">Parsing context</typeparam>
+	public interface NodeListener<TCtx> where TCtx : class {
 
 
 		/// <summary>
@@ -59,20 +62,26 @@ namespace TypeCobol.Compiler.Parser
 		/// <param name="ce">CodeElement created</param>
 		/// <param name="context">Context associated to ce's creation</param>
 		/// <param name="program">Current scope program</param>
-		void OnNode(Node node, ParserRuleContext context, CodeModel.Program program);
+		void OnNode(Node node, TCtx context, CodeModel.Program program);
 	}
 
-	public class NodeDispatcher: NodeListener {
-		public IList<System.Type> GetNodes() { return null; }
+    /// <summary>
+    /// Node Dispatcher witha parsing context
+    /// </summary>
+    /// <typeparam name="TCtx">Parsing Context</typeparam>
+	public class NodeDispatcher<TCtx> : NodeListener<TCtx> where TCtx : class
+    {
+
+        public IList<System.Type> GetNodes() { return null; }
 
 		/// <summary>Notifies listeners about the creation of a new CodeElement.</summary>
-		public void OnNode(Node node, ParserRuleContext context, CodeModel.Program program) {
+		public void OnNode(Node node, TCtx context, CodeModel.Program program) {
 			foreach(var listener in _listeners) {
                 listener.OnNode(node, context, program);
 			}
 		}
 
-        private IList<NodeListener> _listeners = null;
+        private IList<NodeListener<TCtx>> _listeners = null;
 
         /// <summary>
         /// Adds to listeners one instance of each type implementing CodeElementListener interface
@@ -81,11 +90,11 @@ namespace TypeCobol.Compiler.Parser
         /// </summary>
         internal void CreateListeners() {
             if (_listeners == null) {
-                _listeners = new List<NodeListener>();
+                _listeners = new List<NodeListener<TCtx>>();
                 var namespaces = new[] { "TypeCobol.Compiler.Diagnostics", };
                 var assembly = Assembly.GetExecutingAssembly();
                 foreach (var names in namespaces) {
-                    var instances = Reflection.GetInstances<NodeListener>(assembly, names);
+                    var instances = Reflection.GetInstances<NodeListener<TCtx>>(assembly, names);
                     foreach (var checker in instances) _listeners.Add(checker);
                 }
             }

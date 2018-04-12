@@ -15,6 +15,10 @@ action code {:
 		get;
 		set;
 	}
+	//Current program identification
+	TypeCobol.Compiler.CodeElements.ProgramIdentification programIdentification;
+	//Curerent library copy;
+	TypeCobol.Compiler.CodeElements.LibraryCopyCodeElement libraryCopy;
 :};
 
 
@@ -164,11 +168,11 @@ non terminal methodEnvironmentDivisionOpt;
 non terminal methodEnvironmentDivision;
 
 non terminal programAttributes;
-non terminal LibraryCopyOpt;
-non terminal ProgramEndOpt;
+non terminal TypeCobol.Compiler.CodeElements.LibraryCopyCodeElement libraryCopyOpt;
+non terminal TypeCobol.Compiler.CodeElements.ProgramEnd programEndOpt;
 non terminal nestedProgramOpt;
 
-non terminal environmentDivisionOpt, environmentDivision;
+non terminal TypeCobol.Compiler.CodeElements.EnvironmentDivisionHeader environmentDivisionOpt, environmentDivision;
 non terminal configurationSectionOpt, configurationSection;
 non terminal inputOutputSectionOpt, inputOutputSection;
 non terminal configurationParagraphs;
@@ -184,6 +188,7 @@ non terminal execSqlStatement;
 non terminal storageEntry;
 non terminal storageEntries;
 non terminal fileDescriptionEntry;
+non terminal fileDescriptionEntriesOpt;
 non terminal fileDescriptionEntries;
 non terminal fileSection;
 non terminal workingStorageSection;
@@ -263,13 +268,13 @@ cobolCompilationUnit ::= cobolProgram:cp
 cobolProgram ::=
 	cobolProgramBase:cpb
     nestedProgramOpt:nsp
-	ProgramEndOpt:pe
-	{: :}
+	programEndOpt:pe
+	{: Builder.EndCobolProgram(pe); :}
 	;
 
 cobolProgramBase ::=
 	programAttributes:pas
-	{: :}
+	{: Builder.StartCobolProgram(programIdentification, libraryCopy); :}
 	environmentDivisionOpt:ed
 	dataDivisionOpt:dv
 	procedureDivisionOpt:pdiv
@@ -372,19 +377,19 @@ methodEnvironmentDivision ::=
 	;
 
 // TCRFUN_LIBRARY_COPY
-programAttributes ::= ProgramIdentification:pid LibraryCopyOpt:lc
-	{:  :}
+programAttributes ::= ProgramIdentification:pid libraryCopyOpt:lc
+	{:  programIdentification = pid; libraryCopy = lc; :}
 	;
 
-LibraryCopyOpt ::= /*empty */
-	{:  :}
+libraryCopyOpt ::= /*empty */
+	{:  RESULT = null; :}
 	| LibraryCopy:lc
-	{:  :}
+	{:  RESULT = lc; :}
 	;
 
-ProgramEndOpt ::= /* empty */
+programEndOpt ::= /* empty */
 	| ProgramEnd:pe
-	{:  :}
+	{:  RESULT = pe; :}
 	;
 
 nestedProgram ::= 	
@@ -412,9 +417,10 @@ environmentDivisionOpt ::= /*empty*/
 
 environmentDivision ::=
 	EnvironmentDivisionHeader:edh  
+	{: Builder.StartEnvironmentDivision(edh); :}
 	configurationSectionOpt:cs
 	inputOutputSectionOpt:ioc
-	{:  :}
+	{: Builder.EndEnvironmentDivision(); :}
 	;
 
 configurationSectionOpt ::= /*empty*/
@@ -425,8 +431,10 @@ configurationSectionOpt ::= /*empty*/
 
 configurationSection ::= ConfigurationSectionHeader:csh
 	{:  :}
-	| ConfigurationSectionHeader:csh configurationParagraphs:cps
-	{:  :}
+	| ConfigurationSectionHeader:csh 
+		{: Builder.StartConfigurationSection(csh); :}
+	  configurationParagraphs:cps
+		{: Builder.EndConfigurationSection(); :}
 	;
 
 configurationParagraphs ::= configurationParagraph:cp
@@ -435,14 +443,15 @@ configurationParagraphs ::= configurationParagraph:cp
 		{:  :}
 	;
 
-configurationParagraph ::= SourceComputerParagraph:scp
-	{:  :}
+configurationParagraph ::= 
+      SourceComputerParagraph:scp
+	{: Builder.StartSourceComputerParagraph(scp); Builder.EndSourceComputerParagraph(); :}
 	| ObjectComputerParagraph:ocp
-	{:  :}
+	{: Builder.StartObjectComputerParagraph(ocp); Builder.EndObjectComputerParagraph(); :}
 	| SpecialNamesParagraph:snp
-	{:  :}
+	{: Builder.StartSpecialNamesParagraph(snp); Builder.EndSpecialNamesParagraph(); :}
 	| RepositoryParagraph:rp
-	{:  :}
+	{: Builder.StartRepositoryParagraph(rp); Builder.EndRepositoryParagraph(); :}
 	;
 
 inputOutputSectionOpt ::= /*empty*/
@@ -453,9 +462,10 @@ inputOutputSectionOpt ::= /*empty*/
 
 inputOutputSection ::= 
 	InputOutputSectionHeader:iosh
+	{: Builder.StartInputOutputSection(iosh); :}
 	fileControlParagraphOpt:fcp
 	ioControlParagraphOpt:iocp
-	{:  :}
+	{: Builder.EndInputOutputSection(); :}
 	;
 
 fileControlParagraphOpt ::= /*empty*/
@@ -466,8 +476,9 @@ fileControlParagraphOpt ::= /*empty*/
 
 fileControlParagraph ::=
 	FileControlParagraphHeader:fcph
+	{: Builder.StartFileControlParagraph(fcph); :}
 	fileControlEntriesOpt:fces
-	{: :}
+	{: Builder.EndFileControlParagraph(); :}
 	;
 
 fileControlEntriesOpt ::= /*empty*/
@@ -477,9 +488,9 @@ fileControlEntriesOpt ::= /*empty*/
 	;
 
 fileControlEntries ::= FileControlEntry:fce
-		{:  :}
+		{: Builder.StartFileControlEntry(fce); Builder.EndFileControlEntry(); :}
 	| fileControlEntries:fces FileControlEntry:fce
-		{:  :}
+		{: Builder.StartFileControlEntry(fce); Builder.EndFileControlEntry(); :}
 	;
 
 ioControlParagraphOpt ::= /*empty*/
@@ -518,33 +529,48 @@ dataDivisionOpt ::= /*empty*/
 
 dataDivision ::=
 	DataDivisionHeader:ddh
+	{: Builder.StartDataDivision(ddh); :}
 	fileSection:fs
 	workingStorageSection :wss
 	localStorageSection:lss
 	linkageSection:ls
-	{: :}
+	{: Builder.EndDataDivision(); :}
 	;
 
 fileSection ::= /*empty*/
 	{:  :}
-	| FileSectionHeader:feh fileDescriptionEntries:des
+	| FileSectionHeader:feh 
+	{: Builder.StartFileSection(feh); :}
+	fileDescriptionEntriesOpt:des
+	{: Builder.EndFileSection(); :}
+	;
+
+fileDescriptionEntriesOpt ::= /*empty*/
+	{:  :}
+	| fileDescriptionEntries:fdes
 	{:  :}
 	;
 
-fileDescriptionEntries ::= /*empty*/
+fileDescriptionEntries ::=
+	fileDescriptionEntry:fde
 	{:  :}
 	| fileDescriptionEntries:fdes fileDescriptionEntry:fde
 	{:  :}
 	;
 
-fileDescriptionEntry ::= FileDescriptionEntry:fde dataDefinitionEntries:dfes
-	{:  :}
+fileDescriptionEntry ::= 
+	FileDescriptionEntry:fde 
+	{: Builder.StartFileDescriptionEntry(fde); :}
+	dataDefinitionEntries:dfes
+	{: Builder.EndFileDescriptionEntry(); :}
 	;
 
 workingStorageSection ::= /*empty*/
 	{:  :}
-	| WorkingStorageSectionHeader:wssh storageEntries:ses
-	{:  :}
+	| WorkingStorageSectionHeader:wssh 
+	{: Builder.StartWorkingStorageSection(wssh); :}
+	  storageEntries:ses
+	{: Builder.EndWorkingStorageSection(); :}
 	;
 
 storageEntries ::= /*empty*/
@@ -567,8 +593,10 @@ execSqlStatement ::= ExecStatement:es
 
 localStorageSection ::= /*empty*/
 	{:  :}
-	| LocalStorageSectionHeader:lsh storageEntries:ses
-	{:  :}
+	| LocalStorageSectionHeader:lsh 
+	{: Builder.StartLocalStorageSection(lsh); :}
+	storageEntries:ses	
+	{: Builder.EndLocalStorageSection(); :}
 	;
 
 dataDefinitionEntriesOpt ::= /*empty*/
@@ -585,19 +613,21 @@ dataDefinitionEntries ::= dataDefinitionEntry:dde
 
 dataDefinitionEntry ::=
 	  DataDescriptionEntry:dde
-	{:  :}
+	{: Builder.StartDataDescriptionEntry(dde); :}
 	| DataRedefinesEntry:dre
-	{:  :}
+	{: Builder.StartDataRedefinesEntry(dre); :}
 	| DataRenamesEntry:dre
-	{:  :}
+	{: Builder.StartDataRenamesEntry(dre); :}
 	| DataConditionEntry:dce
-	{:  :}
+	{: Builder.StarDataConditionEntry(dce); :}
 	;
 
 linkageSection ::= /*empty*/
 	{:  :}
-	| LinkageSectionHeader:lsh dataDefinitionEntriesOpt:ddes
-	{:  :}
+	| LinkageSectionHeader:lsh 
+	{: Builder.StartLinkageSection(lsh); :}
+	dataDefinitionEntriesOpt:ddes
+	{: Builder.EndLinkageSection(); :}
 	;
 
 procedureDivisionOpt ::= /*empty*/
@@ -609,9 +639,10 @@ procedureDivisionOpt ::= /*empty*/
 // TCRFUN_DECLARATION_AS_NESTED_PROGRAM
 procedureDivision ::=
 	ProcedureDivisionHeader:pdh 
+	{: Builder.StartProcedureDivision(pdh); :}
 	declarativesOpt:decls
 	functionOrSectionDeclarations:elems
-	{: :}
+	{: Builder.EndProcedureDivision(); :}
 	;
 
 functionOrSectionDeclarations ::= /*empty*/
@@ -632,10 +663,11 @@ functionOrSectionDeclaration ::= functionDeclaration:fd
 // TCRFUN_MANDATORY_END_DECLARE
 functionDeclaration ::=
 	FunctionDeclarationHeader:fdh
+	{: Builder.StartFunctionDeclaration(fdh); :}
 	dataDivisionOpt:dv
 	functionProcedureDivisionOpt:fpd
 	FunctionDeclarationEnd:fe
-	{: :}
+	{: Builder.EndFunctionDeclaration(fe); :}
 	;
 
 functionProcedureDivisionOpt ::= /*empty*/
@@ -647,10 +679,11 @@ functionProcedureDivisionOpt ::= /*empty*/
 // TCRFUN_DECLARATION_NO_DECLARATIVES
 functionProcedureDivision ::=
 	ProcedureDivisionHeader:pdh 
-	{:  :}
-| 	ProcedureDivisionHeader:pdh sections:alls
-	{:  :}
-
+	{: Builder.StartFunctionProcedureDivision(pdh); Builder.EndFunctionProcedureDivision(); :}
+| 	ProcedureDivisionHeader:pdh 
+	{: Builder.StartFunctionProcedureDivision(pdh); :}
+	sections:alls
+	{: Builder.EndFunctionProcedureDivision(); :}
 	;
 
 
@@ -662,9 +695,10 @@ declarativesOpt ::= /*empty*/
 
 declaratives ::=
 	DeclarativesHeader:dh
+	{: Builder.StartDeclaratives(dh); :}
 	declarativesSections:decls
 	DeclarativesEnd:de
-	{:  :}
+	{: Builder.EndDeclaratives(de); :}
 	;
 
 
@@ -675,9 +709,13 @@ declarativesSections ::= declarativesSection:ds
 	;
 
 declarativesSection ::= 
-	SectionHeader:sh UseStatement:us
+	SectionHeader:sh 
 	{:  :}
-	| SectionHeader:sh UseStatement:us paragraphs:p
+	UseStatement:us
+	{:  :}
+	| SectionHeader:sh 
+	{:  :}
+	UseStatement:us paragraphs:p
 	{:  :}	
 	;
 
