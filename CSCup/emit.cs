@@ -517,12 +517,18 @@ public class emit {
       cout.WriteLine();
       cout.WriteLine("  /** Production table. */");
       cout.WriteLine("  protected static readonly short[][] _production_table = ");
+#if JAVA_CUP_WAY
       cout.Write  ("    unpackFromStrings(");
       do_table_as_string(cout, prod_table);
       cout.WriteLine(");");
+#else
+        //JCM: Parsing table Optimization: 
+        //See : https://github.com/TypeCobolTeam/TypeCobol/issues/897
+        do_table_as_table(cout, prod_table);
+#endif
 
-      /* do the public accessor method */
-      cout.WriteLine();
+            /* do the public accessor method */
+            cout.WriteLine();
       cout.WriteLine("  /** Access to production table. */");
       cout.WriteLine("  public override short[][] production_table() " + 
 						 "{return _production_table;}");
@@ -626,13 +632,19 @@ public class emit {
       /* finish off the init of the table */
       cout.WriteLine();
       cout.WriteLine("  /** Parse-action table. */");
-      cout.WriteLine("  protected static readonly short[][] _action_table = "); 
+      cout.WriteLine("  protected static readonly short[][] _action_table = ");
+#if JAVA_CUP_WAY
       cout.Write  ("    unpackFromStrings(");
       do_table_as_string(cout, action_table);
       cout.WriteLine(");");
+#else
+    //JCM: Parsing table Optimization: 
+    //See : https://github.com/TypeCobolTeam/TypeCobol/issues/897
+    do_table_as_table(cout, action_table);
+#endif
 
-      /* do the public accessor method */
-      cout.WriteLine();
+            /* do the public accessor method */
+            cout.WriteLine();
       cout.WriteLine("  /** Access to parse-action table. */");
       cout.WriteLine("  public override short[][] action_table() {return _action_table;}");
 
@@ -687,13 +699,19 @@ public class emit {
       /* emit the table. */
       cout.WriteLine();
       cout.WriteLine("  /** <code>reduce_goto</code> table. */");
-      cout.WriteLine("  protected static readonly short[][] _reduce_table = "); 
+      cout.WriteLine("  protected static readonly short[][] _reduce_table = ");
+#if JAVA_CUP_WAY
       cout.Write  ("    unpackFromStrings(");
       do_table_as_string(cout, reduce_goto_table);
       cout.WriteLine(");");
+#else
+            //JCM: Parsing table Optimization: 
+            //See : https://github.com/TypeCobolTeam/TypeCobol/issues/897
+            do_table_as_table(cout, reduce_goto_table);
+#endif
 
-      /* do the public accessor method */
-      cout.WriteLine();
+            /* do the public accessor method */
+            cout.WriteLine();
       cout.WriteLine("  /** Access to <code>reduce_goto</code> table. */");
       cout.WriteLine("  public override short[][] reduce_table() {return _reduce_table;}");
       cout.WriteLine();
@@ -724,8 +742,42 @@ public class emit {
     }
     cout.Write("\" }");
   }
-  // split string if it is very long; start new line occasionally for neatness
-  protected static int do_newline(TextWriter cout, int nchar, int nbytes) {
+
+        /// <summary>
+        /// Genetate the array as a C# short[][] array declaration without using
+        /// the encoding of the static method do_table_as_string:
+        /// With C# static data are not limited to 65535 bytes like in Java.
+        /// See : https://github.com/TypeCobolTeam/TypeCobol/issues/897
+        /// </summary>
+        /// <param name="cout"></param>
+        /// <param name="sa"></param>
+        protected static void do_table_as_table(TextWriter cout, short[][] sa)
+    {
+        cout.WriteLine(string.Format("new short[{0}][] {{", sa.Length));
+        for (int i = 0; i < sa.Length; i++)
+        {
+            cout.Write(string.Format("\tnew short[{0}]{{", sa[i].Length));
+            string sep = "";
+            for (int j = 0; j < sa[i].Length; j++)
+            {
+                cout.Write(sep);
+                cout.Write(sa[i][j]);
+                sep = ",";
+            }
+            if (i != sa.Length - 1)
+            {
+                cout.WriteLine("},");
+            }
+            else
+            {
+                cout.WriteLine("}");
+            }
+        }
+        cout.WriteLine("};");
+    }
+
+        // split string if it is very long; start new line occasionally for neatness
+        protected static int do_newline(TextWriter cout, int nchar, int nbytes) {
     if (nbytes > 65500)  { cout.WriteLine("\", "); cout.Write("    \""); }
     else if (nchar > 11) { cout.WriteLine("\" +"); cout.Write("    \""); }
     else return nchar+1;
