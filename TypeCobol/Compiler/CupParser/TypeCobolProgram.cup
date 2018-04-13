@@ -726,13 +726,17 @@ sections ::= section:s
 	;
 
 section ::= SectionHeader:sh 
-	{:  :}
-	| SectionHeader:sh paragraphs:ps
-	{:  :}
+	{: Builder.StartSection(sh); Builder.EndSection(); :}
+	| SectionHeader:sh 
+	{: Builder.StartSection(sh); :}
+	paragraphs:ps
+	{: Builder.EndSection(); :}
 	| ParagraphHeader:ph 
-	{:  :}
-	| ParagraphHeader:ph paragraphs:ps
-	{:  :}
+	{: Builder.StartParagraph(ph); Builder.EndParagraph(); :}
+	| ParagraphHeader:ph 
+	{: Builder.StartParagraph(ph); :}
+	paragraphs:ps
+	{: Builder.EndParagraph(); :}
 	| sentences:alls
 	{:  :}
 	;
@@ -743,8 +747,11 @@ paragraphs ::= paragraph:p
 	{:  :}
 	;
 
-paragraph ::= ParagraphHeader:ph sentencesOpt:alls
-	{:  :}
+paragraph ::= 
+	ParagraphHeader:ph 
+	{: Builder.StartParagraph(ph); :}
+	sentencesOpt:alls
+	{: Builder.EndParagraph(); :}
 	| sentences:alls
 	{:  :}
 	;
@@ -762,12 +769,12 @@ sentences ::= sentence:s
 	;
 
 sentence ::= SentenceEnd:send
-	{:  :}
-    | statements:stmts SentenceEnd:send
-	{:  :}
+	  {: Builder.StartSentence(); Builder.EndSentence(send); :}
+    | {: Builder.StartSentence(); :} statements:stmts SentenceEnd:send
+	  {: Builder.EndSentence(send); :}
 	//JCM RESOLVE THIS TODO
 	| ExecStatement:stmt
-	{:  :}
+	{: Builder.StartExecStatement(stmt); Builder.EndExecStatement(); :}
 	;
 
 statements ::= statement:stmt
@@ -784,9 +791,9 @@ statement ::= singleStatement:stmt
 
 singleStatement ::=
 	ContinueStatement:stmt
-	{:  :}
+	{: Builder.OnContinueStatement(stmt); :}
 	| EntryStatement:stmt
-	{:  :}
+	{: Builder.OnEntryStatement(stmt); :}
 // -- arithmetic --
 // -- see computeStatementConditional --
 // -- data movement --

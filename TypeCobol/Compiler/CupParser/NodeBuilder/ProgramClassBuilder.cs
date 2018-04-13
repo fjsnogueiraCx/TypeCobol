@@ -567,5 +567,195 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         {
             Exit();
         }
+
+        public virtual void StartSection(SectionHeader header)
+        {
+            var section = new Section(header);
+            Enter(section, header);
+            section.SymbolTable.AddSection(section);
+        }
+
+        public virtual void EndSection()
+        {
+            Exit();
+        }
+
+        public virtual void StartParagraph(ParagraphHeader header)
+        {
+            var paragraph = new Paragraph(header);
+            Enter(paragraph, header);
+            paragraph.SymbolTable.AddParagraph(paragraph);
+        }
+
+        public virtual void EndParagraph()
+        {
+            Exit();
+        }
+
+        public virtual void StartSentence()
+        {
+            Enter(new Sentence(), null);
+        }
+
+        public virtual void EndSentence(SentenceEnd end)
+        {
+            AttachEndIfExists(end);
+            if (CurrentNode is Sentence) Exit();//TODO remove this and check what happens when exiting last CALL in FIN-STANDARD in BigBatch file (ie. CheckPerformance test)
+        }
+
+        public virtual void StartExecStatement(ExecStatement execStmt)
+        {
+            Enter(new Exec(execStmt), execStmt);
+        }
+
+        public virtual void EndExecStatement()
+        {
+            Exit();
+        }
+
+        public virtual void OnContinueStatement(ContinueStatement stmt)
+        {
+            Enter(new Continue(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnEntryStatement(EntryStatement stmt)
+        {
+            Enter(new Entry(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnAcceptStatement(AcceptStatement stmt)
+        {
+            Enter(new Accept(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnInitializeStatement(InitializeStatement stmt)
+        {
+            Enter(new Initialize(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnInspectStatement(InspectStatement stmt)
+        {
+            Enter(new Inspect(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnMoveStatement(MoveStatement stmt)
+        {
+            Enter(new Move(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnSetStatement(SetStatement stmt)
+        {
+            Enter(new Set(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnStopStatement(StopStatement stmt)
+        {
+            Enter(new Stop(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnExitMethodStatement(ExitMethodStatement stmt)
+        {
+            Enter(new ExitMethod(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnExitProgramStatement(ExitProgramStatement stmt)
+        {
+            Enter(new ExitProgram(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnGobackStatement(GobackStatement stmt)
+        {
+            Enter(new Goback(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnCloseStatement(CloseStatement stmt)
+        {
+            Enter(new Close(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnDisplayStatement(DisplayStatement stmt)
+        {
+            Enter(new Display(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnOpenStatement(OpenStatement stmt)
+        {
+            Enter(new Open(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnMergeStatement(MergeStatement stmt)
+        {
+            Enter(new Merge(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnReleaseStatement(ReleaseStatement stmt)
+        {
+            Enter(new Release(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnSortStatement(SortStatement stmt)
+        {
+            Enter(new Sort(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnAlterStatement(AlterStatement stmt)
+        {
+            Enter(new Alter(stmt), stmt);
+            Exit();
+        }
+
+        public void OnExitStatement(ExitStatement stmt)
+        {
+            Enter(new Exit(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnGotoStatement(GotoStatement stmt)
+        {
+            Enter(new Goto(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnPerformProcedureStatement(PerformProcedureStatement stmt)
+        {
+            Enter(new PerformProcedure(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnCancelStatement(CancelStatement stmt)
+        {
+            Enter(new Cancel(stmt), stmt);
+            Exit();
+        }
+
+        public virtual void OnProcedureStyleCall(ProcedureStyleCallStatement stmt, CallStatementEnd end)
+        {
+            Enter(new ProcedureStyleCall(stmt), stmt);
+            Exit();
+            AttachEndIfExists(end);
+        }
+
+        public virtual void OnExecStatement(ExecStatement stmt)
+        {
+            Enter(new Exec(stmt), stmt);
+            Exit();
+        }
     }
 }

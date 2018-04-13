@@ -267,5 +267,85 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         /// End a Function PROCEDURE DIVISION
         /// </summary>
         void EndFunctionProcedureDivision();
+
+        /// <summary>
+        /// Start a Section
+        /// </summary>
+        /// <param name="header">The section header code element</param>
+        void StartSection([NotNull] SectionHeader header);
+
+        /// <summary>
+        /// End a Section
+        /// </summary>
+        void EndSection();
+
+        /// <summary>
+        /// Start a Paragraph
+        /// </summary>
+        /// <param name="header">The Paragraph header code element</param>
+        void StartParagraph([NotNull] ParagraphHeader header);
+
+        /// <summary>
+        /// End a paragraph
+        /// </summary>
+        void EndParagraph();
+
+        /// <summary>
+        /// Start a sentence
+        /// </summary>
+        void StartSentence();
+
+        /// <summary>
+        /// End a sentence
+        /// </summary>
+        void EndSentence(SentenceEnd end);
+
+        /// <summary>
+        /// Start an Exec Statement
+        /// </summary>
+        /// <param name="execStmt">The Exec Statement code element</param>
+        void StartExecStatement([NotNull] ExecStatement execStmt);
+
+        /// <summary>
+        /// End an Exec Statement
+        /// </summary>
+        void EndExecStatement();
+
+        /// <summary>
+        /// Continue Statement seen
+        /// </summary>
+        /// <param name="stmt">Continue Statement code element</param>
+        void OnContinueStatement([NotNull] ContinueStatement stmt);
+
+        /// <summary>
+        /// Entry Statement seen
+        /// </summary>
+        /// <param name="stmt">Entry Statement code element</param>
+        void OnEntryStatement([NotNull] EntryStatement stmt);
+
+        void OnAcceptStatement([NotNull] AcceptStatement stmt);
+        void OnInitializeStatement([NotNull] InitializeStatement stmt);
+        void OnInspectStatement([NotNull] InspectStatement stmt);
+        void OnMoveStatement([NotNull] MoveStatement stmt);
+        void OnSetStatement([NotNull] SetStatement stmt);
+        void OnStopStatement([NotNull] StopStatement stmt);
+        void OnExitMethodStatement([NotNull] ExitMethodStatement stmt);
+        void OnExitProgramStatement([NotNull] ExitProgramStatement stmt);
+        void OnGobackStatement([NotNull] GobackStatement stmt);
+        void OnCloseStatement([NotNull] CloseStatement stmt);
+        void OnDisplayStatement([NotNull] DisplayStatement stmt);
+        void OnOpenStatement([NotNull] OpenStatement stmt);
+        void OnMergeStatement([NotNull] MergeStatement stmt);
+        void OnReleaseStatement([NotNull] ReleaseStatement stmt);
+        void OnSortStatement([NotNull] SortStatement stmt);
+        void OnAlterStatement([NotNull] AlterStatement stmt);
+        void OnExitStatement([NotNull] ExitStatement stmt);
+        void OnGotoStatement([NotNull] GotoStatement stmt);
+        void OnPerformProcedureStatement([NotNull] PerformProcedureStatement stmt);
+        void OnCancelStatement([NotNull] CancelStatement stmt);
+        void OnProcedureStyleCall([NotNull] ProcedureStyleCallStatement stmt, CallStatementEnd end = null);
+        void OnExecStatement([NotNull] ExecStatement stmt);
+
+
     }
 }
