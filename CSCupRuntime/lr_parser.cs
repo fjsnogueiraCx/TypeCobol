@@ -363,7 +363,7 @@ public abstract class lr_parser {
    * @param message an error message.
    * @param info    an extra object reserved for use by specialized subclasses.
    */
-  public void report_fatal_error(
+  public virtual void report_fatal_error(
     string   message, 
     object   info)
     {
@@ -388,7 +388,7 @@ public abstract class lr_parser {
    * @param message an error message.
    * @param info    an extra object reserved for use by specialized subclasses.
    */
-  public void report_error(string message, object info)
+  public virtual void report_error(string message, object info)
     {
       System.Console.Error.Write(message);
       if (info.GetType()==typeof(Symbol))
@@ -407,7 +407,7 @@ public abstract class lr_parser {
    *
    * @param cur_token the current lookahead Symbol.
    */
-  public void syntax_error(Symbol cur_token)
+  public virtual void syntax_error(Symbol cur_token)
     {
       report_error("Syntax error", cur_token);
     }
@@ -419,7 +419,7 @@ public abstract class lr_parser {
    *
    * @param cur_token the current lookahead Symbol.
    */
-  public void unrecovered_syntax_error(Symbol cur_token)
+  public virtual void unrecovered_syntax_error(Symbol cur_token)
   
     {
       report_fatal_error("Couldn't repair and continue parse", cur_token);
