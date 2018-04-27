@@ -1051,7 +1051,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
             Enter(new Return(stmt), stmt);
         }
 
-        public virtual void EndReturnStatementConditional(TypeCobol.Compiler.CodeElements.RewriteStatementEnd end)
+        public virtual void EndReturnStatementConditional(TypeCobol.Compiler.CodeElements.ReturnStatementEnd end)
         {
             AttachEndIfExists(end);
         }

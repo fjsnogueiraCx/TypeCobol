@@ -638,7 +638,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         /// End a Conditional RETURN Statemenent 
         /// </summary>
         /// <param name="end">The Optional END-RETURN Statement code element</param>
-        void EndReturnStatementConditional(TypeCobol.Compiler.CodeElements.RewriteStatementEnd end = null);
+        void EndReturnStatementConditional(TypeCobol.Compiler.CodeElements.ReturnStatementEnd end = null);
         /// <summary>
         /// Start a Conditional REWRITE Statemenent 
         /// </summary>

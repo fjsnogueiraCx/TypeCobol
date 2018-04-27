@@ -10,15 +10,71 @@ using TypeCobol.Compiler.CodeElements;
 using TypeCobol.Compiler.CupParser.NodeBuilder;
 
 action code {:
+	//Current program identification
+	TypeCobol.Compiler.CodeElements.ProgramIdentification programIdentification;
+	//Curerent library copy;
+	TypeCobol.Compiler.CodeElements.LibraryCopyCodeElement libraryCopy;
+:};
+
+parser code {:
+	// The Program Class Builder instance.
 	public IProgramClassBuilder Builder
 	{
 		get;
 		set;
 	}
-	//Current program identification
-	TypeCobol.Compiler.CodeElements.ProgramIdentification programIdentification;
-	//Curerent library copy;
-	TypeCobol.Compiler.CodeElements.LibraryCopyCodeElement libraryCopy;
+	// The Error Reporter instance
+	public ICupParserErrorReporter ErrorReporter
+	{
+		get;
+		set;
+	}
+
+  public override void report_fatal_error(
+    string   message, 
+    object   info)
+	{
+		if(ErrorReporter != null) {
+			if (ErrorReporter.ReportFatalError(this, message, info))
+			{
+				return;
+			}
+		}
+		base.report_fatal_error(message, info);
+	}
+
+	public override void report_error(string message, object info)
+	{
+		if(ErrorReporter != null) {
+			if (ErrorReporter.ReportError(this, message, info))
+			{
+				return;
+			}
+		}
+		base.report_error(message, info);
+	}
+
+	public override void syntax_error(Symbol cur_token)
+	{
+		if(ErrorReporter != null) {
+			if (ErrorReporter.SyntaxError(this, cur_token))
+			{
+				return;
+			}
+		}
+		base.syntax_error(cur_token);
+	}
+
+	public override void unrecovered_syntax_error(Symbol cur_token)
+	{
+		if(ErrorReporter != null) {
+			if (ErrorReporter.UnrecoveredSyntaxError(this, cur_token))
+			{
+				return;
+			}
+		}
+		base.unrecovered_syntax_error(cur_token);
+	}
 :};
 
 
@@ -255,6 +311,50 @@ non terminal writeStatementConditional;
 non terminal xmlGenerateStatementConditional;
 non terminal xmlParseStatementConditional;
 
+non terminal procedureDivisionHeader;
+non terminal functionProcedureDivisionHeader;
+non terminal sectionHeader;
+non terminal paragraphHeader;
+
+non terminal ifstatement;
+non terminal elseCondition;
+non terminal nextSentenceStatement;
+non terminal addStatement;
+non terminal callStatement;
+non terminal computeStatement;
+non terminal deleteStatement;
+non terminal divideStatement;
+non terminal evaluateStatement;
+non terminal invokeStatement;
+non terminal multiplyStatement;
+non terminal performStatement;
+non terminal readStatement;
+non terminal returnStatement;
+non terminal rewriteStatement;
+non terminal searchStatement;
+non terminal whenSearchCondition;
+non terminal whenEvaluateConditionsStart;
+non terminal whenOtherCondition;
+non terminal startStatement;
+non terminal stringStatement;
+non terminal subtractStatement;
+non terminal unstringStatement;
+non terminal writeStatement;
+non terminal xmlGenerateStatement;
+non terminal xmlParseStatement;
+
+non terminal atEndCondition;
+non terminal notAtEndCondition;
+non terminal onExceptionCondition;
+non terminal notOnExceptionCondition;
+non terminal invalidKeyCondition;
+non terminal notInvalidKeyCondition;
+non terminal onOverflowCondition;
+non terminal notOnOverflowCondition;
+non terminal onSizeErrorCondition;
+non terminal notOnSizeErrorCondition;
+
+
 /* The grammar */
 cobolCompilationUnit ::= cobolProgram:cp
 	| cobolClass:cc
@@ -269,12 +369,12 @@ cobolProgram ::=
 	cobolProgramBase:cpb
     nestedProgramOpt:nsp
 	programEndOpt:pe
-	{: Builder.EndCobolProgram(pe); :}
+	{: my_parser.Builder.EndCobolProgram(pe); :}
 	;
 
 cobolProgramBase ::=
 	programAttributes:pas
-	{: Builder.StartCobolProgram(programIdentification, libraryCopy); :}
+	{: my_parser.Builder.StartCobolProgram(programIdentification, libraryCopy); :}
 	environmentDivisionOpt:ed
 	dataDivisionOpt:dv
 	procedureDivisionOpt:pdiv
@@ -417,10 +517,10 @@ environmentDivisionOpt ::= /*empty*/
 
 environmentDivision ::=
 	EnvironmentDivisionHeader:edh  
-	{: Builder.StartEnvironmentDivision(edh); :}
+	{: my_parser.Builder.StartEnvironmentDivision(edh); :}
 	configurationSectionOpt:cs
 	inputOutputSectionOpt:ioc
-	{: Builder.EndEnvironmentDivision(); :}
+	{: my_parser.Builder.EndEnvironmentDivision(); :}
 	;
 
 configurationSectionOpt ::= /*empty*/
@@ -432,9 +532,9 @@ configurationSectionOpt ::= /*empty*/
 configurationSection ::= ConfigurationSectionHeader:csh
 	{:  :}
 	| ConfigurationSectionHeader:csh 
-		{: Builder.StartConfigurationSection(csh); :}
+		{: my_parser.Builder.StartConfigurationSection(csh); :}
 	  configurationParagraphs:cps
-		{: Builder.EndConfigurationSection(); :}
+		{: my_parser.Builder.EndConfigurationSection(); :}
 	;
 
 configurationParagraphs ::= configurationParagraph:cp
@@ -445,13 +545,13 @@ configurationParagraphs ::= configurationParagraph:cp
 
 configurationParagraph ::= 
       SourceComputerParagraph:scp
-	{: Builder.StartSourceComputerParagraph(scp); Builder.EndSourceComputerParagraph(); :}
+	{: my_parser.Builder.StartSourceComputerParagraph(scp); my_parser.Builder.EndSourceComputerParagraph(); :}
 	| ObjectComputerParagraph:ocp
-	{: Builder.StartObjectComputerParagraph(ocp); Builder.EndObjectComputerParagraph(); :}
+	{: my_parser.Builder.StartObjectComputerParagraph(ocp); my_parser.Builder.EndObjectComputerParagraph(); :}
 	| SpecialNamesParagraph:snp
-	{: Builder.StartSpecialNamesParagraph(snp); Builder.EndSpecialNamesParagraph(); :}
+	{: my_parser.Builder.StartSpecialNamesParagraph(snp); my_parser.Builder.EndSpecialNamesParagraph(); :}
 	| RepositoryParagraph:rp
-	{: Builder.StartRepositoryParagraph(rp); Builder.EndRepositoryParagraph(); :}
+	{: my_parser.Builder.StartRepositoryParagraph(rp); my_parser.Builder.EndRepositoryParagraph(); :}
 	;
 
 inputOutputSectionOpt ::= /*empty*/
@@ -462,10 +562,10 @@ inputOutputSectionOpt ::= /*empty*/
 
 inputOutputSection ::= 
 	InputOutputSectionHeader:iosh
-	{: Builder.StartInputOutputSection(iosh); :}
+	{: my_parser.Builder.StartInputOutputSection(iosh); :}
 	fileControlParagraphOpt:fcp
 	ioControlParagraphOpt:iocp
-	{: Builder.EndInputOutputSection(); :}
+	{: my_parser.Builder.EndInputOutputSection(); :}
 	;
 
 fileControlParagraphOpt ::= /*empty*/
@@ -476,9 +576,9 @@ fileControlParagraphOpt ::= /*empty*/
 
 fileControlParagraph ::=
 	FileControlParagraphHeader:fcph
-	{: Builder.StartFileControlParagraph(fcph); :}
+	{: my_parser.Builder.StartFileControlParagraph(fcph); :}
 	fileControlEntriesOpt:fces
-	{: Builder.EndFileControlParagraph(); :}
+	{: my_parser.Builder.EndFileControlParagraph(); :}
 	;
 
 fileControlEntriesOpt ::= /*empty*/
@@ -488,9 +588,9 @@ fileControlEntriesOpt ::= /*empty*/
 	;
 
 fileControlEntries ::= FileControlEntry:fce
-		{: Builder.StartFileControlEntry(fce); Builder.EndFileControlEntry(); :}
+		{: my_parser.Builder.StartFileControlEntry(fce); my_parser.Builder.EndFileControlEntry(); :}
 	| fileControlEntries:fces FileControlEntry:fce
-		{: Builder.StartFileControlEntry(fce); Builder.EndFileControlEntry(); :}
+		{: my_parser.Builder.StartFileControlEntry(fce); my_parser.Builder.EndFileControlEntry(); :}
 	;
 
 ioControlParagraphOpt ::= /*empty*/
@@ -529,20 +629,20 @@ dataDivisionOpt ::= /*empty*/
 
 dataDivision ::=
 	DataDivisionHeader:ddh
-	{: Builder.StartDataDivision(ddh); :}
+	{: my_parser.Builder.StartDataDivision(ddh); :}
 	fileSection:fs
 	workingStorageSection :wss
 	localStorageSection:lss
 	linkageSection:ls
-	{: Builder.EndDataDivision(); :}
+	{: my_parser.Builder.EndDataDivision(); :}
 	;
 
 fileSection ::= /*empty*/
 	{:  :}
 	| FileSectionHeader:feh 
-	{: Builder.StartFileSection(feh); :}
+	{: my_parser.Builder.StartFileSection(feh); :}
 	fileDescriptionEntriesOpt:des
-	{: Builder.EndFileSection(); :}
+	{: my_parser.Builder.EndFileSection(); :}
 	;
 
 fileDescriptionEntriesOpt ::= /*empty*/
@@ -560,17 +660,17 @@ fileDescriptionEntries ::=
 
 fileDescriptionEntry ::= 
 	FileDescriptionEntry:fde 
-	{: Builder.StartFileDescriptionEntry(fde); :}
+	{: my_parser.Builder.StartFileDescriptionEntry(fde); :}
 	dataDefinitionEntries:dfes
-	{: Builder.EndFileDescriptionEntry(); :}
+	{: my_parser.Builder.EndFileDescriptionEntry(); :}
 	;
 
 workingStorageSection ::= /*empty*/
 	{:  :}
 	| WorkingStorageSectionHeader:wssh 
-	{: Builder.StartWorkingStorageSection(wssh); :}
+	{: my_parser.Builder.StartWorkingStorageSection(wssh); :}
 	  storageEntries:ses
-	{: Builder.EndWorkingStorageSection(); :}
+	{: my_parser.Builder.EndWorkingStorageSection(); :}
 	;
 
 storageEntries ::= /*empty*/
@@ -594,9 +694,9 @@ execSqlStatement ::= ExecStatement:es
 localStorageSection ::= /*empty*/
 	{:  :}
 	| LocalStorageSectionHeader:lsh 
-	{: Builder.StartLocalStorageSection(lsh); :}
+	{: my_parser.Builder.StartLocalStorageSection(lsh); :}
 	storageEntries:ses	
-	{: Builder.EndLocalStorageSection(); :}
+	{: my_parser.Builder.EndLocalStorageSection(); :}
 	;
 
 dataDefinitionEntriesOpt ::= /*empty*/
@@ -613,21 +713,21 @@ dataDefinitionEntries ::= dataDefinitionEntry:dde
 
 dataDefinitionEntry ::=
 	  DataDescriptionEntry:dde
-	{: Builder.StartDataDescriptionEntry(dde); :}
+	{: my_parser.Builder.StartDataDescriptionEntry(dde); :}
 	| DataRedefinesEntry:dre
-	{: Builder.StartDataRedefinesEntry(dre); :}
+	{: my_parser.Builder.StartDataRedefinesEntry(dre); :}
 	| DataRenamesEntry:dre
-	{: Builder.StartDataRenamesEntry(dre); :}
+	{: my_parser.Builder.StartDataRenamesEntry(dre); :}
 	| DataConditionEntry:dce
-	{: Builder.StarDataConditionEntry(dce); :}
+	{: my_parser.Builder.StarDataConditionEntry(dce); :}
 	;
 
 linkageSection ::= /*empty*/
 	{:  :}
 	| LinkageSectionHeader:lsh 
-	{: Builder.StartLinkageSection(lsh); :}
+	{: my_parser.Builder.StartLinkageSection(lsh); :}
 	dataDefinitionEntriesOpt:ddes
-	{: Builder.EndLinkageSection(); :}
+	{: my_parser.Builder.EndLinkageSection(); :}
 	;
 
 procedureDivisionOpt ::= /*empty*/
@@ -638,11 +738,14 @@ procedureDivisionOpt ::= /*empty*/
 
 // TCRFUN_DECLARATION_AS_NESTED_PROGRAM
 procedureDivision ::=
-	ProcedureDivisionHeader:pdh 
-	{: Builder.StartProcedureDivision(pdh); :}
+	procedureDivisionHeader:pdh 	
 	declarativesOpt:decls
 	functionOrSectionDeclarations:elems
-	{: Builder.EndProcedureDivision(); :}
+	{: my_parser.Builder.EndProcedureDivision(); :}
+	;
+
+procedureDivisionHeader ::= ProcedureDivisionHeader:pdh 
+	{: my_parser.Builder.StartProcedureDivision(pdh); :}
 	;
 
 functionOrSectionDeclarations ::= /*empty*/
@@ -663,11 +766,11 @@ functionOrSectionDeclaration ::= functionDeclaration:fd
 // TCRFUN_MANDATORY_END_DECLARE
 functionDeclaration ::=
 	FunctionDeclarationHeader:fdh
-	{: Builder.StartFunctionDeclaration(fdh); :}
+	{: my_parser.Builder.StartFunctionDeclaration(fdh); :}
 	dataDivisionOpt:dv
 	functionProcedureDivisionOpt:fpd
 	FunctionDeclarationEnd:fe
-	{: Builder.EndFunctionDeclaration(fe); :}
+	{: my_parser.Builder.EndFunctionDeclaration(fe); :}
 	;
 
 functionProcedureDivisionOpt ::= /*empty*/
@@ -678,14 +781,16 @@ functionProcedureDivisionOpt ::= /*empty*/
 
 // TCRFUN_DECLARATION_NO_DECLARATIVES
 functionProcedureDivision ::=
-	ProcedureDivisionHeader:pdh 
-	{: Builder.StartFunctionProcedureDivision(pdh); Builder.EndFunctionProcedureDivision(); :}
-| 	ProcedureDivisionHeader:pdh 
-	{: Builder.StartFunctionProcedureDivision(pdh); :}
+	functionProcedureDivisionHeader:pdh 
+	{: my_parser.Builder.EndFunctionProcedureDivision(); :}
+| 	functionProcedureDivisionHeader:pdh 
 	sections:alls
-	{: Builder.EndFunctionProcedureDivision(); :}
+	{: my_parser.Builder.EndFunctionProcedureDivision(); :}
 	;
 
+functionProcedureDivisionHeader ::= ProcedureDivisionHeader:pdh 
+	{: my_parser.Builder.StartFunctionProcedureDivision(pdh); :}
+	;
 
 declarativesOpt ::= /*empty*/
 	{:  :}
@@ -695,10 +800,10 @@ declarativesOpt ::= /*empty*/
 
 declaratives ::=
 	DeclarativesHeader:dh
-	{: Builder.StartDeclaratives(dh); :}
+	{: my_parser.Builder.StartDeclaratives(dh); :}
 	declarativesSections:decls
 	DeclarativesEnd:de
-	{: Builder.EndDeclaratives(de); :}
+	{: my_parser.Builder.EndDeclaratives(de); :}
 	;
 
 
@@ -710,11 +815,9 @@ declarativesSections ::= declarativesSection:ds
 
 declarativesSection ::= 
 	SectionHeader:sh 
-	{:  :}
 	UseStatement:us
 	{:  :}
 	| SectionHeader:sh 
-	{:  :}
 	UseStatement:us paragraphs:p
 	{:  :}	
 	;
@@ -725,20 +828,24 @@ sections ::= section:s
 	{:  :}
 	;
 
-section ::= SectionHeader:sh 
-	{: Builder.StartSection(sh); Builder.EndSection(); :}
-	| SectionHeader:sh 
-	{: Builder.StartSection(sh); :}
-	paragraphs:ps
-	{: Builder.EndSection(); :}
-	| ParagraphHeader:ph 
-	{: Builder.StartParagraph(ph); Builder.EndParagraph(); :}
-	| ParagraphHeader:ph 
-	{: Builder.StartParagraph(ph); :}
-	paragraphs:ps
-	{: Builder.EndParagraph(); :}
+section ::= sectionHeader:sh 
+	{: my_parser.Builder.EndSection(); :}
+	| sectionHeader:sh paragraphs:ps
+	{: my_parser.Builder.EndSection(); :}
+	| paragraphHeader:ph 
+	{: my_parser.Builder.EndParagraph(); :}
+	| paragraphHeader:ph paragraphs:ps
+	{: my_parser.Builder.EndParagraph(); :}
 	| sentences:alls
 	{:  :}
+	;
+
+sectionHeader ::= SectionHeader:sh 
+	{: my_parser.Builder.StartSection(sh); :}
+	;
+
+paragraphHeader ::= ParagraphHeader:ph 
+	{: my_parser.Builder.StartParagraph(ph); :}
 	;
 
 paragraphs ::= paragraph:p
@@ -748,10 +855,9 @@ paragraphs ::= paragraph:p
 	;
 
 paragraph ::= 
-	ParagraphHeader:ph 
-	{: Builder.StartParagraph(ph); :}
+	paragraphHeader:ph 
 	sentencesOpt:alls
-	{: Builder.EndParagraph(); :}
+	{: my_parser.Builder.EndParagraph(); :}
 	| sentences:alls
 	{:  :}
 	;
@@ -769,12 +875,12 @@ sentences ::= sentence:s
 	;
 
 sentence ::= SentenceEnd:send
-	  {: Builder.StartSentence(); Builder.EndSentence(send); :}
-    | {: Builder.StartSentence(); :} statements:stmts SentenceEnd:send
-	  {: Builder.EndSentence(send); :}
+	  {: my_parser.Builder.StartSentence(); my_parser.Builder.EndSentence(send); :}
+    | {: my_parser.Builder.StartSentence(); :} statements:stmts SentenceEnd:send
+	  {: my_parser.Builder.EndSentence(send); :}
 	//JCM RESOLVE THIS TODO
 	| ExecStatement:stmt
-	{: Builder.StartExecStatement(stmt); Builder.EndExecStatement(); :}
+	{: my_parser.Builder.StartExecStatement(stmt); my_parser.Builder.EndExecStatement(); :}
 	;
 
 statements ::= statement:stmt
@@ -793,64 +899,64 @@ statement ::= singleStatement:stmt
 
 singleStatement ::=
 	ContinueStatement:stmt
-	{: Builder.OnContinueStatement(stmt); :}
+	{: my_parser.Builder.OnContinueStatement(stmt); :}
 	| EntryStatement:stmt
-	{: Builder.OnEntryStatement(stmt); :}
+	{: my_parser.Builder.OnEntryStatement(stmt); :}
 // -- arithmetic --
 // -- see computeStatementConditional --
 // -- data movement --
 	| AcceptStatement:stmt // (DATE, DAY, DAY-OF-WEEK, TIME)
-	{: Builder.OnAcceptStatement(stmt); :}
+	{: my_parser.Builder.OnAcceptStatement(stmt); :}
 	| InitializeStatement:stmt
-	{: Builder.OnInitializeStatement(stmt); :}
+	{: my_parser.Builder.OnInitializeStatement(stmt); :}
 	| InspectStatement:stmt
-	{: Builder.OnInspectStatement(stmt); :}
+	{: my_parser.Builder.OnInspectStatement(stmt); :}
 	| MoveStatement:stmt
-	{: Builder.OnMoveStatement(stmt); :}
+	{: my_parser.Builder.OnMoveStatement(stmt); :}
 	| SetStatement:stmt
-	{: Builder.OnSetStatement(stmt); :}
+	{: my_parser.Builder.OnSetStatement(stmt); :}
 // -- ending --
 	| StopStatement:stmt
-	{: Builder.OnStopStatement(stmt); :}
+	{: my_parser.Builder.OnStopStatement(stmt); :}
 	| ExitMethodStatement:stmt
-	{: Builder.OnExitMethodStatement(stmt); :}
+	{: my_parser.Builder.OnExitMethodStatement(stmt); :}
 	| ExitProgramStatement:stmt
-	{: Builder.OnExitProgramStatement(stmt); :}
+	{: my_parser.Builder.OnExitProgramStatement(stmt); :}
 	| GobackStatement:stmt
-	{: Builder.OnGobackStatement(stmt); :}
+	{: my_parser.Builder.OnGobackStatement(stmt); :}
 // -- input-output --
 	| CloseStatement:stmt
-	{: Builder.OnCloseStatement(stmt); :}
+	{: my_parser.Builder.OnCloseStatement(stmt); :}
 	| DisplayStatement:stmt
-	{: Builder.OnDisplayStatement(stmt); :}
+	{: my_parser.Builder.OnDisplayStatement(stmt); :}
 	| OpenStatement:stmt
-	{: Builder.OnOpenStatement(stmt); :}
+	{: my_parser.Builder.OnOpenStatement(stmt); :}
 // -- ordering --
 	| MergeStatement:stmt
-	{: Builder.OnMergeStatement(stmt); :}
+	{: my_parser.Builder.OnMergeStatement(stmt); :}
 	| ReleaseStatement:stmt
-	{: Builder.OnReleaseStatement(stmt); :}
+	{: my_parser.Builder.OnReleaseStatement(stmt); :}
 	| SortStatement:stmt
-	{: Builder.OnSortStatement(stmt); :}
+	{: my_parser.Builder.OnSortStatement(stmt); :}
 // -- procedure-branching --
 	| AlterStatement:stmt
-	{: Builder.OnAlterStatement(stmt); :}
+	{: my_parser.Builder.OnAlterStatement(stmt); :}
 	| ExitStatement:stmt
-	{: Builder.OnExitStatement(stmt); :}
+	{: my_parser.Builder.OnExitStatement(stmt); :}
 	| GotoStatement:stmt
-	{: Builder.OnGotoStatement(stmt); :}
+	{: my_parser.Builder.OnGotoStatement(stmt); :}
 	| PerformProcedureStatement:stmt
-	{: Builder.OnPerformProcedureStatement(stmt); :}
+	{: my_parser.Builder.OnPerformProcedureStatement(stmt); :}
 // -- program or method linkage --// TYPECOBOL
 	| ProcedureStyleCall:stmt
-	{: Builder.OnProcedureStyleCall(stmt, null); :}
+	{: my_parser.Builder.OnProcedureStyleCall(stmt, null); :}
 	| ProcedureStyleCall:stmt CallStatementEnd:end
-	{: Builder.OnProcedureStyleCall(stmt, end); :}
+	{: my_parser.Builder.OnProcedureStyleCall(stmt, end); :}
 	| CancelStatement:stmt
-	{: Builder.OnCancelStatement(stmt); :}
+	{: my_parser.Builder.OnCancelStatement(stmt); :}
 // -- DB2 & CICS integration --
 	| ExecStatement:stmt
-	{: Builder.OnExecStatement(stmt); :}
+	{: my_parser.Builder.OnExecStatement(stmt); :}
 	;
 	
 // Statements with optional body  
@@ -899,25 +1005,33 @@ compoundStatement ::= addStatementConditional:stmt
 	;
 
 addStatementConditional ::=
-		AddStatement:stmt
-		{: Builder.StartAddStatementConditional(stmt); Builder.EndAddStatementConditional(); :}
-	|	AddStatement:stmt AddStatementEnd:end
-		{: Builder.StartAddStatementConditional(stmt); Builder.EndAddStatementConditional(end); :}
-	|	AddStatement:stmt {: Builder.StartAddStatementConditional(stmt); :} sizeErrorConditions:conds
-		{:  Builder.EndAddStatementConditional(); :}
-	|	AddStatement:stmt {: Builder.StartAddStatementConditional(stmt); :} sizeErrorConditions:conds AddStatementEnd:end
-		{:  Builder.EndAddStatementConditional(end); :}
+		addStatement
+		{: my_parser.Builder.EndAddStatementConditional(); :}
+	|	addStatement AddStatementEnd:end
+		{: my_parser.Builder.EndAddStatementConditional(end); :}
+	|	addStatement sizeErrorConditions:conds
+		{:  my_parser.Builder.EndAddStatementConditional(); :}
+	|	addStatement sizeErrorConditions:conds AddStatementEnd:end
+		{:  my_parser.Builder.EndAddStatementConditional(end); :}
+	;
+
+addStatement ::= AddStatement:stmt
+	{: my_parser.Builder.StartAddStatementConditional(stmt); :}
 	;
 
 callStatementConditional ::=
-		CallStatement:stmt
-		{: Builder.StartCallStatementConditional(stmt); Builder.EndCallStatementConditional(); :}
-	|	CallStatement:stmt {: Builder.StartCallStatementConditional(stmt); :} CallStatementEnd:end
-		{: Builder.EndCallStatementConditional(end); :}
-	|	CallStatement:stmt {: Builder.StartCallStatementConditional(stmt); :} callStatementConditions:conds
-		{: Builder.EndCallStatementConditional(); :}
-	|	CallStatement:stmt {: Builder.StartCallStatementConditional(stmt); :} callStatementConditions:conds CallStatementEnd:end
-		{:  Builder.EndCallStatementConditional(end); :}
+		callStatement
+		{: my_parser.Builder.EndCallStatementConditional(); :}
+	|	callStatement CallStatementEnd:end
+		{: my_parser.Builder.EndCallStatementConditional(end); :}
+	|	callStatement callStatementConditions:conds
+		{: my_parser.Builder.EndCallStatementConditional(); :}
+	|	callStatement callStatementConditions:conds CallStatementEnd:end
+		{:  my_parser.Builder.EndCallStatementConditional(end); :}
+	;
+
+callStatement ::= CallStatement:stmt
+	{: my_parser.Builder.StartCallStatementConditional(stmt); :}
 	;
 
 callStatementConditions ::=
@@ -930,55 +1044,72 @@ callStatementConditions ::=
 	;
 
 computeStatementConditional ::=
-		ComputeStatement:stmt
-		{: Builder.StartComputeStatementConditional(stmt); Builder.EndComputeStatementConditional(); :}
-	|	ComputeStatement:stmt {: Builder.StartComputeStatementConditional(stmt); :} ComputeStatementEnd:end
-		{: Builder.EndComputeStatementConditional(end); :}
-	|	ComputeStatement:stmt {: Builder.StartComputeStatementConditional(stmt); :} sizeErrorConditions:conds
-		{: Builder.EndComputeStatementConditional(); :}
-	|	ComputeStatement:stmt {: Builder.StartComputeStatementConditional(stmt); :} sizeErrorConditions:conds ComputeStatementEnd:end
-		{: Builder.EndComputeStatementConditional(end); :}
+		computeStatement
+		{: my_parser.Builder.EndComputeStatementConditional(); :}
+	|	computeStatement ComputeStatementEnd:end
+		{: my_parser.Builder.EndComputeStatementConditional(end); :}
+	|	computeStatement sizeErrorConditions:conds
+		{: my_parser.Builder.EndComputeStatementConditional(); :}
+	|	computeStatement sizeErrorConditions:conds ComputeStatementEnd:end
+		{: my_parser.Builder.EndComputeStatementConditional(end); :}
+	;
+
+computeStatement ::= ComputeStatement:stmt
+	{: my_parser.Builder.StartComputeStatementConditional(stmt); :}
 	;
 
 deleteStatementConditional ::=
-		DeleteStatement:stmt
-		{: Builder.StartDeleteStatementConditional(stmt); Builder.EndDeleteStatementConditional(); :}
-	|	DeleteStatement:stmt {: Builder.StartDeleteStatementConditional(stmt); :} DeleteStatementEnd:end
-		{: Builder.EndDeleteStatementConditional(end); :}
-	|	DeleteStatement:stmt {: Builder.StartDeleteStatementConditional(stmt); :} keyConditions:conds
-		{: Builder.EndDeleteStatementConditional(); :}
-	|	DeleteStatement:stmt {: Builder.StartDeleteStatementConditional(stmt); :} keyConditions:conds DeleteStatementEnd:end
-		{: Builder.EndDeleteStatementConditional(end); :}
+		deleteStatement
+		{: my_parser.Builder.EndDeleteStatementConditional(); :}
+	|	deleteStatement DeleteStatementEnd:end
+		{: my_parser.Builder.EndDeleteStatementConditional(end); :}
+	|	deleteStatement keyConditions:conds
+		{: my_parser.Builder.EndDeleteStatementConditional(); :}
+	|	deleteStatement keyConditions:conds DeleteStatementEnd:end
+		{: my_parser.Builder.EndDeleteStatementConditional(end); :}
 	;
 
+deleteStatement ::= DeleteStatement:stmt
+	{: my_parser.Builder.StartDeleteStatementConditional(stmt); :}
+	;
+
+
 divideStatementConditional ::=
-		DivideStatement:stmt
-		{: Builder.StartDivideStatementConditional(stmt); Builder.EndDivideStatementConditional(); :}
-	|	DivideStatement:stmt {: Builder.StartDivideStatementConditional(stmt); :} DivideStatementEnd:end
-		{: Builder.EndDivideStatementConditional(end); :}
-	|	DivideStatement:stmt {: Builder.StartDivideStatementConditional(stmt); :} sizeErrorConditions:conds
-		{: Builder.EndDivideStatementConditional(); :}
-	|	DivideStatement:stmt sizeErrorConditions:conds DivideStatementEnd:end
-		{: Builder.EndDivideStatementConditional(end); :}
+		divideStatement
+		{: my_parser.Builder.EndDivideStatementConditional(); :}
+	|	divideStatement DivideStatementEnd:end
+		{: my_parser.Builder.EndDivideStatementConditional(end); :}
+	|	divideStatement sizeErrorConditions:conds
+		{: my_parser.Builder.EndDivideStatementConditional(); :}
+	|	divideStatement sizeErrorConditions:conds DivideStatementEnd:end
+		{: my_parser.Builder.EndDivideStatementConditional(end); :}
+	;
+
+divideStatement ::= DivideStatement:stmt
+	{: my_parser.Builder.StartDivideStatementConditional(stmt); :}
 	;
 
 evaluateStatementWithBody ::=
-		EvaluateStatement:est
-		{: Builder.StartEvaluateStatementWithBody(est); Builder.EndEvaluateStatementWithBody(); :}
-	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} EvaluateStatementEnd:ese
-		{: Builder.EndEvaluateStatementWithBody(ese); :}
-	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} whenConditionClauses:wccs
-		{: Builder.EndEvaluateStatementWithBody(); :}
-	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} whenConditionClauses:wccs  EvaluateStatementEnd:ese
-		{: Builder.EndEvaluateStatementWithBody(ese); :}
-	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} whenOtherClause:woc
-		{: Builder.EndEvaluateStatementWithBody(); :}
-	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} whenOtherClause:woc EvaluateStatementEnd:ese
-		{: Builder.EndEvaluateStatementWithBody(ese); :}
-	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} whenConditionClauses:wccs whenOtherClause:woc
-		{: Builder.EndEvaluateStatementWithBody(); :}
-	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} whenConditionClauses:wccs whenOtherClause:woc EvaluateStatementEnd:ese
-		{: Builder.EndEvaluateStatementWithBody(ese); :}
+		evaluateStatement
+		{: my_parser.Builder.EndEvaluateStatementWithBody(); :}
+	|	evaluateStatement EvaluateStatementEnd:ese
+		{: my_parser.Builder.EndEvaluateStatementWithBody(ese); :}
+	|	evaluateStatement whenConditionClauses:wccs
+		{: my_parser.Builder.EndEvaluateStatementWithBody(); :}
+	|	evaluateStatement whenConditionClauses:wccs  EvaluateStatementEnd:ese
+		{: my_parser.Builder.EndEvaluateStatementWithBody(ese); :}
+	|	evaluateStatement whenOtherClause:woc
+		{: my_parser.Builder.EndEvaluateStatementWithBody(); :}
+	|	evaluateStatement whenOtherClause:woc EvaluateStatementEnd:ese
+		{: my_parser.Builder.EndEvaluateStatementWithBody(ese); :}
+	|	evaluateStatement whenConditionClauses:wccs whenOtherClause:woc
+		{: my_parser.Builder.EndEvaluateStatementWithBody(); :}
+	|	evaluateStatement whenConditionClauses:wccs whenOtherClause:woc EvaluateStatementEnd:ese
+		{: my_parser.Builder.EndEvaluateStatementWithBody(ese); :}
+	;
+
+evaluateStatement ::= EvaluateStatement:est
+	{: my_parser.Builder.StartEvaluateStatementWithBody(est); :}
 	;
 
 whenConditionClauses ::= 
@@ -988,8 +1119,8 @@ whenConditionClauses ::=
 		{:  :}
 	;
 
-whenConditionClause ::= whenEvaluateConditions:wecs {: Builder.StartWhenConditionClause(wecs); :} statements:stmts
-	{: Builder.EndWhenConditionClause(); :}
+whenConditionClause ::= whenEvaluateConditionsStart:wecs  statements:stmts
+	{: my_parser.Builder.EndWhenConditionClause(); :}
 	;
 
 whenEvaluateCondition ::= WhenSearchCondition:wec
@@ -1004,84 +1135,121 @@ whenEvaluateConditions ::= whenEvaluateCondition:wec
 	{: wecs.Add(wec); RESULT = wecs; :}
 	;
 
-whenOtherClause ::= WhenOtherCondition:woc {: Builder.StartWhenOtherClause(woc); :} statements:stmts
-	{: Builder.EndWhenOtherClause(); :}
+whenEvaluateConditionsStart ::= whenEvaluateConditions:wecs
+	{: my_parser.Builder.StartWhenConditionClause(wecs); :}
+	;
+
+
+whenOtherClause ::= whenOtherCondition:woc statements:stmts
+	{: my_parser.Builder.EndWhenOtherClause(); :}
+	;
+
+whenOtherCondition ::= WhenOtherCondition:woc 
+	{: my_parser.Builder.StartWhenOtherClause(woc); :}
 	;
 
 ifStatementWithBody ::=
-	IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} statements:thenStmts
-	{: Builder.EndIfStatementWithBody(); :}
-	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} statements:thenStmts IfStatementEnd:end
-	{: Builder.EndIfStatementWithBody(end); :}
+	ifstatement:ifs statements:thenStmts
+	{: my_parser.Builder.EndIfStatementWithBody(); :}
+	| ifstatement:ifs statements:thenStmts IfStatementEnd:end
+	{: my_parser.Builder.EndIfStatementWithBody(end); :}
 
-	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} NextSentenceStatement:thenNext
-	{:  Builder.AddNextSentenceStatement(thenNext); Builder.EndIfStatementWithBody(); :}
-	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} NextSentenceStatement:thenNext IfStatementEnd:end
-	{:  Builder.AddNextSentenceStatement(thenNext); Builder.EndIfStatementWithBody(end); :}
+	| ifstatement:ifs nextSentenceStatement:ness
+	{:  my_parser.Builder.EndIfStatementWithBody(); :}
+	| ifstatement:ifs nextSentenceStatement:ness IfStatementEnd:end
+	{: my_parser.Builder.EndIfStatementWithBody(end); :}
 
-	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} statements:thenStmts ElseCondition:ec {: Builder.EnterElseClause(ifs); :} statements:elseStmts
-	{: Builder.EndIfStatementWithBody(); :}
-	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} statements:thenStmts ElseCondition:ec {: Builder.EnterElseClause(ifs); :} NextSentenceStatement:elseNext
-	{:  Builder.AddNextSentenceStatement(elseNext); Builder.EndIfStatementWithBody(); :}
+	| ifstatement:ifs statements:thenStmts elseCondition:ec statements:elseStmts
+	{: my_parser.Builder.EndIfStatementWithBody(); :}
+	| ifstatement:ifs statements:thenStmts elseCondition:ec nextSentenceStatement:ness
+	{: my_parser.Builder.EndIfStatementWithBody(); :}
 
-	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} statements:thenStmts ElseCondition:ec {: Builder.EnterElseClause(ifs); :} statements:elseStmts IfStatementEnd:end
-	{: Builder.EndIfStatementWithBody(end); :}
-	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} statements:thenStmts ElseCondition:ec {: Builder.EnterElseClause(ifs); :} NextSentenceStatement:elseNext IfStatementEnd:end
-	{:  Builder.AddNextSentenceStatement(elseNext); Builder.EndIfStatementWithBody(end); :}
+	| ifstatement:ifs statements:thenStmts elseCondition:ec statements:elseStmts IfStatementEnd:end
+	{: my_parser.Builder.EndIfStatementWithBody(end); :}
+	| ifstatement:ifs statements:thenStmts elseCondition:ec nextSentenceStatement:ness IfStatementEnd:end
+	{: my_parser.Builder.EndIfStatementWithBody(end); :}
 
-	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} NextSentenceStatement:thenNext {: Builder.AddNextSentenceStatement(thenNext); :} ElseCondition:ec {: Builder.EnterElseClause(ifs); :} statements:elseStmts
-	{: Builder.EndIfStatementWithBody(); :}
-	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} NextSentenceStatement:thenNext {: Builder.AddNextSentenceStatement(thenNext); :} ElseCondition:ec {: Builder.EnterElseClause(ifs); :} NextSentenceStatement:elseNext
-	{:  Builder.AddNextSentenceStatement(elseNext); Builder.EndIfStatementWithBody(); :}
+	| ifstatement:ifs nextSentenceStatement:ness elseCondition:ec statements:elseStmts
+	{: my_parser.Builder.EndIfStatementWithBody(); :}
+	| ifstatement:ifs nextSentenceStatement:nessThen elseCondition:ec nextSentenceStatement:nessElse
+	{: my_parser.Builder.EndIfStatementWithBody(); :}
 
-	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} NextSentenceStatement:thenNext {: Builder.AddNextSentenceStatement(thenNext); :} ElseCondition:ec {: Builder.EnterElseClause(ifs); :} statements:elseStmts IfStatementEnd:end
-	{: Builder.EndIfStatementWithBody(end); :}
-	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} NextSentenceStatement:thenNext {: Builder.AddNextSentenceStatement(thenNext); :} ElseCondition:ec {: Builder.EnterElseClause(ifs); :} NextSentenceStatement:elseNext IfStatementEnd:end
-	{:  Builder.AddNextSentenceStatement(elseNext); Builder.EndIfStatementWithBody(end); :}
+	| ifstatement:ifs nextSentenceStatement:ness elseCondition:ec statements:elseStmts IfStatementEnd:end
+	{: my_parser.Builder.EndIfStatementWithBody(end); :}
+	| ifstatement:ifs nextSentenceStatement:nessThen elseCondition:ec nextSentenceStatement:nessElse IfStatementEnd:end
+	{: my_parser.Builder.EndIfStatementWithBody(end); :}
+	;
+
+ifstatement ::= IfStatement:ifs
+	{: my_parser.Builder.StartIfStatementWithBody(ifs); :}
+	;
+
+elseCondition ::= ElseCondition:ec 
+	{: my_parser.Builder.EnterElseClause(ec); :}
+	;
+
+nextSentenceStatement ::= NextSentenceStatement:next
+	{: my_parser.Builder.AddNextSentenceStatement(next); :}
 	;
 
 invokeStatementConditional ::=
-		InvokeStatement:stmt
-		{: Builder.StartInvokeStatementConditional(stmt); Builder.EndInvokeStatementConditional(); :}
-	|	InvokeStatement:stmt {: Builder.StartInvokeStatementConditional(stmt); :} InvokeStatementEnd:end
-		{: Builder.EndInvokeStatementConditional(end); :}
-	|	InvokeStatement:stmt {: Builder.StartInvokeStatementConditional(stmt); :} exceptionConditions:conds
-		{: Builder.EndInvokeStatementConditional(); :}
-	|	InvokeStatement:stmt {: Builder.StartInvokeStatementConditional(stmt); :} exceptionConditions:conds InvokeStatementEnd:end
-		{: Builder.EndInvokeStatementConditional(end); :}
+		invokeStatement:stmt
+		{: my_parser.Builder.EndInvokeStatementConditional(); :}
+	|	invokeStatement:stmt InvokeStatementEnd:end
+		{: my_parser.Builder.EndInvokeStatementConditional(end); :}
+	|	invokeStatement:stmt exceptionConditions:conds
+		{: my_parser.Builder.EndInvokeStatementConditional(); :}
+	|	invokeStatement:stmt exceptionConditions:conds InvokeStatementEnd:end
+		{: my_parser.Builder.EndInvokeStatementConditional(end); :}
+	;
+
+invokeStatement ::= InvokeStatement:stmt
+	{: my_parser.Builder.StartInvokeStatementConditional(stmt); :}
 	;
 
 multiplyStatementConditional ::=
-		MultiplyStatement:stmt
-		{: Builder.StartMultiplyStatementConditional(stmt); Builder.EndMultiplyStatementConditional(); :}
-	|	MultiplyStatement:stmt {: Builder.StartMultiplyStatementConditional(stmt); :} MultiplyStatementEnd:end
-		{: Builder.EndMultiplyStatementConditional(end); :}
-	|	MultiplyStatement:stmt {: Builder.StartMultiplyStatementConditional(stmt); :} sizeErrorConditions:conds
-		{: Builder.EndMultiplyStatementConditional(); :}
-	|	MultiplyStatement:stmt sizeErrorConditions:conds {: Builder.StartMultiplyStatementConditional(stmt); :} MultiplyStatementEnd:end
-		{: Builder.EndMultiplyStatementConditional(end); :}
+		multiplyStatement:stmt
+		{: my_parser.Builder.EndMultiplyStatementConditional(); :}
+	|	multiplyStatement:stmt MultiplyStatementEnd:end
+		{: my_parser.Builder.EndMultiplyStatementConditional(end); :}
+	|	multiplyStatement:stmt sizeErrorConditions:conds
+		{: my_parser.Builder.EndMultiplyStatementConditional(); :}
+	|	multiplyStatement:stmt sizeErrorConditions:conds MultiplyStatementEnd:end
+		{: my_parser.Builder.EndMultiplyStatementConditional(end); :}
+	;
+
+multiplyStatement ::= MultiplyStatement:stmt
+	{: my_parser.Builder.StartMultiplyStatementConditional(stmt); :}
 	;
 
 performStatementWithBody ::=			
-		PerformStatement:stmt
-		{: Builder.StartPerformStatementWithBody(stmt); Builder.EndPerformStatementWithBody(); :}
-	|	PerformStatement:stmt {: Builder.StartPerformStatementWithBody(stmt); :} PerformStatementEnd:end
-		{: Builder.EndPerformStatementWithBody(end); :}
-	|	PerformStatement:stmt {: Builder.StartPerformStatementWithBody(stmt); :} statements:stmts
-		{: Builder.EndPerformStatementWithBody(); :}
-	|	PerformStatement:stmt {: Builder.StartPerformStatementWithBody(stmt); :} statements:stmts PerformStatementEnd:end
-		{: Builder.EndPerformStatementWithBody(end); :}
+		performStatement:stmt
+		{: my_parser.Builder.EndPerformStatementWithBody(); :}
+	|	performStatement:stmt PerformStatementEnd:end
+		{: my_parser.Builder.EndPerformStatementWithBody(end); :}
+	|	performStatement:stmt statements:stmts
+		{: my_parser.Builder.EndPerformStatementWithBody(); :}
+	|	performStatement:stmt statements:stmts PerformStatementEnd:end
+		{: my_parser.Builder.EndPerformStatementWithBody(end); :}
+	;
+
+performStatement ::= PerformStatement:stmt
+	{: my_parser.Builder.StartPerformStatementWithBody(stmt); :}
 	;
 
 readStatementConditional ::=
-		ReadStatement:stmt
-		{: Builder.EnterReadStatementConditional(stmt); Builder.EndReadStatementConditional(); :}
-	|	ReadStatement:stmt {: Builder.EnterReadStatementConditional(stmt); :} ReadStatementEnd:end
-		{: Builder.EndReadStatementConditional(end); :}
-	|	ReadStatement:stmt {: Builder.EnterReadStatementConditional(stmt); :} rwStatementConditions:conds
-		{: Builder.EndReadStatementConditional(); :}
-	|	ReadStatement:stmt {: Builder.EnterReadStatementConditional(stmt); :} rwStatementConditions:conds ReadStatementEnd:end
-		{: Builder.EndReadStatementConditional(end); :}
+		readStatement:stmt
+		{: my_parser.Builder.EndReadStatementConditional(); :}
+	|	readStatement:stmt ReadStatementEnd:end
+		{: my_parser.Builder.EndReadStatementConditional(end); :}
+	|	readStatement:stmt rwStatementConditions:conds
+		{: my_parser.Builder.EndReadStatementConditional(); :}
+	|	readStatement:stmt rwStatementConditions:conds ReadStatementEnd:end
+		{: my_parser.Builder.EndReadStatementConditional(end); :}
+	;
+
+readStatement ::= ReadStatement:stmt
+	{: my_parser.Builder.EnterReadStatementConditional(stmt); :}
 	;
 
 rwStatementCondition ::=
@@ -1103,43 +1271,59 @@ rwStatementConditions ::=
 	;
 
 returnStatementConditional ::=
-		ReturnStatement:stmt
-		{: Builder.EnterReturnStatementConditional(stmt); Builder.EndReturnStatementConditional(); :}
-	|	ReturnStatement:stmt {: Builder.EnterReturnStatementConditional(stmt); :} ReturnStatementEnd:end
-		{: Builder.EndReturnStatementConditional(end); :}
-	|	ReturnStatement:stmt {: Builder.EnterReturnStatementConditional(stmt); :} endConditions:conds
-		{: Builder.EndReturnStatementConditional(); :}
-	|	ReturnStatement:stmt {: Builder.EnterReturnStatementConditional(stmt); :} endConditions:conds ReturnStatementEnd:end
-		{: Builder.EndReturnStatementConditional(end); :}
+		returnStatement:stmt
+		{: my_parser.Builder.EndReturnStatementConditional(); :}
+	|	returnStatement:stmt ReturnStatementEnd:end
+		{: my_parser.Builder.EndReturnStatementConditional(end); :}
+	|	returnStatement:stmt endConditions:conds
+		{: my_parser.Builder.EndReturnStatementConditional(); :}
+	|	returnStatement:stmt endConditions:conds ReturnStatementEnd:end
+		{: my_parser.Builder.EndReturnStatementConditional(end); :}
+	;
+
+returnStatement ::= ReturnStatement:stmt
+	{: my_parser.Builder.EnterReturnStatementConditional(stmt); :}
 	;
 
 rewriteStatementConditional ::=
-		RewriteStatement:stmt
-		{: Builder.StartRewriteStatementConditional(stmt); Builder.EndRewriteStatementConditional(); :}
-	|	RewriteStatement:stmt {: Builder.StartRewriteStatementConditional(stmt); :} RewriteStatementEnd:end
-		{: Builder.EndRewriteStatementConditional(end); :}
-	|	RewriteStatement:stmt {: Builder.StartRewriteStatementConditional(stmt); :} keyConditions:conds
-		{: Builder.EndRewriteStatementConditional(); :}
-	|	RewriteStatement:stmt {: Builder.StartRewriteStatementConditional(stmt); :} keyConditions:conds RewriteStatementEnd:end
-		{: Builder.EndRewriteStatementConditional(end); :}
+		rewriteStatement:stmt
+		{: my_parser.Builder.EndRewriteStatementConditional(); :}
+	|	rewriteStatement:stmt RewriteStatementEnd:end
+		{: my_parser.Builder.EndRewriteStatementConditional(end); :}
+	|	rewriteStatement:stmt keyConditions:conds
+		{: my_parser.Builder.EndRewriteStatementConditional(); :}
+	|	rewriteStatement:stmt keyConditions:conds RewriteStatementEnd:end
+		{: my_parser.Builder.EndRewriteStatementConditional(end); :}
+	;
+
+rewriteStatement ::= RewriteStatement:stmt
+	{: my_parser.Builder.StartRewriteStatementConditional(stmt); :}
 	;
 
 searchStatementWithBody ::=
-		SearchStatement:stmt {: Builder.StartSearchStatementWithBody(stmt); :} whenSearchConditionClauses:wsccs
-		{: Builder.EndSearchStatementWithBody(); :}
-	|	SearchStatement:stmt {: Builder.StartSearchStatementWithBody(stmt); :} whenSearchConditionClauses:wsccs SearchStatementEnd:send
-		{: Builder.EndSearchStatementWithBody(end); :}
-	|	SearchStatement:stmt {: Builder.StartSearchStatementWithBody(stmt); :} onAtEnd:cend whenSearchConditionClauses:wsccs
-		{: Builder.EndSearchStatementWithBody(); :}
-	|	SearchStatement:stmt {: Builder.StartSearchStatementWithBody(stmt); :} onAtEnd:cend whenSearchConditionClauses:wsccs SearchStatementEnd:send
-		{: Builder.EndSearchStatementWithBody(end); :}
+		searchStatement:stmt whenSearchConditionClauses:wsccs
+		{: my_parser.Builder.EndSearchStatementWithBody(); :}
+	|	searchStatement:stmt whenSearchConditionClauses:wsccs SearchStatementEnd:end
+		{: my_parser.Builder.EndSearchStatementWithBody(end); :}
+	|	searchStatement:stmt onAtEnd:cend whenSearchConditionClauses:wsccs
+		{: my_parser.Builder.EndSearchStatementWithBody(); :}
+	|	searchStatement:stmt onAtEnd:cend whenSearchConditionClauses:wsccs SearchStatementEnd:end
+		{: my_parser.Builder.EndSearchStatementWithBody(end); :}
+	;
+
+searchStatement ::= SearchStatement:stmt
+	{: my_parser.Builder.StartSearchStatementWithBody(stmt); :}
 	;
 
 whenSearchConditionClause ::= 
-		WhenSearchCondition:wsc {: Builder.StartWhenSearchConditionClause(wsc); :} statements:stmts
-		{: Builder.EndWhenSearchConditionClause(); :}
-	|	WhenSearchCondition:wsc {: Builder.StartWhenSearchConditionClause(wsc); :} NextSentenceStatement:next
-		{: Builder.AddNextSentenceStatement(); Builder.EndWhenSearchConditionClause(); :}
+		whenSearchCondition:wsc  statements:stmts
+		{: my_parser.Builder.EndWhenSearchConditionClause(); :}
+	|	whenSearchCondition:wsc  nextSentenceStatement:ness
+		{: my_parser.Builder.EndWhenSearchConditionClause(); :}
+	;
+
+whenSearchCondition ::= WhenSearchCondition:wsc 
+	{: my_parser.Builder.StartWhenSearchConditionClause(wsc); :}
 	;
 
 whenSearchConditionClauses ::= whenSearchConditionClause:wscc
@@ -1149,93 +1333,126 @@ whenSearchConditionClauses ::= whenSearchConditionClause:wscc
 	;
 
 startStatementConditional ::=
-		StartStatement:stmt
-		{: Builder.StartStartStatementConditional(stmt); Builder.EndStartStatementConditional(); :}
-	|	StartStatement:stmt {: Builder.StartStartStatementConditional(stmt); :} StartStatementEnd:end
-		{: Builder.EndStartStatementConditional(end); :}
-	|	StartStatement:stmt {: Builder.StartStartStatementConditional(stmt); :} keyConditions:conds
-		{: Builder.EndStartStatementConditional(); :}
-	|	StartStatement:stmt {: Builder.StartStartStatementConditional(stmt); :} keyConditions:conds StartStatementEnd:end
-		{: Builder.EndStartStatementConditional(end); :}
+		startStatement:stmt
+		{: my_parser.Builder.EndStartStatementConditional(); :}
+	|	startStatement:stmt StartStatementEnd:end
+		{: my_parser.Builder.EndStartStatementConditional(end); :}
+	|	startStatement:stmt keyConditions:conds
+		{: my_parser.Builder.EndStartStatementConditional(); :}
+	|	startStatement:stmt keyConditions:conds StartStatementEnd:end
+		{: my_parser.Builder.EndStartStatementConditional(end); :}
+	;
+
+startStatement ::= StartStatement:stmt
+	{: my_parser.Builder.StartStartStatementConditional(stmt); :}
 	;
 
 stringStatementConditional ::=
-		StringStatement:stmt
-		{: Builder.StartStringStatementConditional(stmt); Builder.EndStringStatementConditional(); :}
-	|	StringStatement:stmt {: Builder.StartStringStatementConditional(stmt); :} StringStatementEnd:end
-		{: Builder.EndStringStatementConditional(end); :}
-	|	StringStatement:stmt {: Builder.StartStringStatementConditional(stmt); :} overflowConditions:conds
-		{: Builder.EndStringStatementConditional(); :}
-	|	StringStatement:stmt {: Builder.StartStringStatementConditional(stmt); :} overflowConditions:conds StringStatementEnd:end
-		{: Builder.EndStringStatementConditional(end); :}
+		stringStatement:stmt
+		{: my_parser.Builder.EndStringStatementConditional(); :}
+	|	stringStatement:stmt StringStatementEnd:end
+		{: my_parser.Builder.EndStringStatementConditional(end); :}
+	|	stringStatement:stmt overflowConditions:conds
+		{: my_parser.Builder.EndStringStatementConditional(); :}
+	|	stringStatement:stmt overflowConditions:conds StringStatementEnd:end
+		{: my_parser.Builder.EndStringStatementConditional(end); :}
 	;
 
+stringStatement ::= StringStatement:stmt
+	 {: my_parser.Builder.StartStringStatementConditional(stmt); :}
+	 ;
+
 subtractStatementConditional ::=
-		SubtractStatement:stmt
-		{: Builder.StartSubtractStatementConditional(stmt); Builder.EndSubtractStatementConditional(); :}
-	|	SubtractStatement:stmt {: Builder.StartSubtractStatementConditional(stmt); :} SubtractStatementEnd:end
-		{: Builder.EndSubtractStatementConditional(end); :}
-	|	SubtractStatement:stmt {: Builder.StartSubtractStatementConditional(stmt); :} sizeErrorConditions:conds
-		{: Builder.EndSubtractStatementConditional(); :}
-	|	SubtractStatement:stmt {: Builder.StartSubtractStatementConditional(stmt); :} sizeErrorConditions:conds SubtractStatementEnd:end
-		{: Builder.EndSubtractStatementConditional(end); :}
+		subtractStatement:stmt
+		{: my_parser.Builder.EndSubtractStatementConditional(); :}
+	|	subtractStatement:stmt SubtractStatementEnd:end
+		{: my_parser.Builder.EndSubtractStatementConditional(end); :}
+	|	subtractStatement:stmt sizeErrorConditions:conds
+		{: my_parser.Builder.EndSubtractStatementConditional(); :}
+	|	subtractStatement:stmt sizeErrorConditions:conds SubtractStatementEnd:end
+		{: my_parser.Builder.EndSubtractStatementConditional(end); :}
+	;
+
+subtractStatement ::= SubtractStatement:stmt
+	{: my_parser.Builder.StartSubtractStatementConditional(stmt); :}
 	;
 
 unstringStatementConditional ::=
-		UnstringStatement:stmt
-		{: Builder.StartUnstringStatementConditional(); Builder.EndUnstringStatementConditional(); :}
-	|	UnstringStatement:stmt {: Builder.StartUnstringStatementConditional(); :} UnstringStatementEnd:end
-		{: Builder.EndUnstringStatementConditional(end); :}
-	|	UnstringStatement:stmt {: Builder.StartUnstringStatementConditional(); :} overflowConditions:conds
-		{: Builder.EndUnstringStatementConditional(); :}
-	|	UnstringStatement:stmt {: Builder.StartUnstringStatementConditional(); :} overflowConditions:conds UnstringStatementEnd:end
-		{: Builder.EndUnstringStatementConditional(end); :}
+		unstringStatement:stmt
+		{: my_parser.Builder.EndUnstringStatementConditional(); :}
+	|	unstringStatement:stmt UnstringStatementEnd:end
+		{: my_parser.Builder.EndUnstringStatementConditional(end); :}
+	|	unstringStatement:stmt overflowConditions:conds
+		{: my_parser.Builder.EndUnstringStatementConditional(); :}
+	|	unstringStatement:stmt overflowConditions:conds UnstringStatementEnd:end
+		{: my_parser.Builder.EndUnstringStatementConditional(end); :}
+	;
+
+unstringStatement ::= UnstringStatement:stmt
+	{: my_parser.Builder.StartUnstringStatementConditional(stmt); :}
 	;
 
 writeStatementConditional ::=
-		WriteStatement:stmt
-		{: Builder.StartWriteStatementConditional(stmt); Builder.EndWriteStatementConditional(); :}
-	|	WriteStatement:stmt {: Builder.StartWriteStatementConditional(stmt); :} WriteStatementEnd:end
-		{: Builder.EndWriteStatementConditional(end); :}
-	|	WriteStatement:stmt {: Builder.StartWriteStatementConditional(stmt); :} rwStatementConditions:conds
-		{: Builder.EndWriteStatementConditional(); :}
-	|	WriteStatement:stmt {: Builder.StartWriteStatementConditional(stmt); :} rwStatementConditions:conds WriteStatementEnd:end
-		{: Builder.EndWriteStatementConditional(end); :}
+		writeStatement:stmt
+		{: my_parser.Builder.EndWriteStatementConditional(); :}
+	|	writeStatement:stmt WriteStatementEnd:end
+		{: my_parser.Builder.EndWriteStatementConditional(end); :}
+	|	writeStatement:stmt rwStatementConditions:conds
+		{: my_parser.Builder.EndWriteStatementConditional(); :}
+	|	writeStatement:stmt rwStatementConditions:conds WriteStatementEnd:end
+		{: my_parser.Builder.EndWriteStatementConditional(end); :}
+	;
+
+writeStatement ::= WriteStatement:stmt
+	{: my_parser.Builder.StartWriteStatementConditional(stmt); :}
 	;
 
 xmlGenerateStatementConditional ::=
-		XmlGenerateStatement:stmt
-		{: Builder(StartXmlGenerateStatementConditional(stmt); Builder.EndXmlGenerateStatementConditional() :}
-	|	XmlGenerateStatement:stmt {: Builder(StartXmlGenerateStatementConditional(stmt); :} XmlStatementEnd:end
-		{: Builder.EndXmlGenerateStatementConditional(end) :}
-	|	XmlGenerateStatement:stmt {: Builder(StartXmlGenerateStatementConditional(stmt); :} exceptionConditions:conds
-		{: Builder.EndXmlGenerateStatementConditional() :}
-	|	XmlGenerateStatement:stmt {: Builder(StartXmlGenerateStatementConditional(stmt); :} exceptionConditions:conds XmlStatementEnd:end
-		{: Builder.EndXmlGenerateStatementConditional(end) :}
+		xmlGenerateStatement:stmt
+		{: my_parser.Builder.EndXmlGenerateStatementConditional(); :}
+	|	xmlGenerateStatement:stmt XmlStatementEnd:end
+		{: my_parser.Builder.EndXmlGenerateStatementConditional(end); :}
+	|	xmlGenerateStatement:stmt exceptionConditions:conds
+		{: my_parser.Builder.EndXmlGenerateStatementConditional(); :}
+	|	xmlGenerateStatement:stmt exceptionConditions:conds XmlStatementEnd:end
+		{: my_parser.Builder.EndXmlGenerateStatementConditional(end); :}
+	;
+
+xmlGenerateStatement ::= XmlGenerateStatement:stmt
+	{: my_parser.Builder.StartXmlGenerateStatementConditional(stmt); :}
 	;
 
 xmlParseStatementConditional ::=
-		XmlParseStatement:stmt
-		{: Builder(StartXmlParseStatementConditional(stmt); Builder.EndXmlParseStatementConditional() :}
-	|	XmlParseStatement:stmt {: Builder(StartXmlParseStatementConditional(stmt); :} XmlStatementEnd:end
-		{: Builder.EndXmlParseStatementConditional(end) :}
-	|	XmlParseStatement:stmt {: Builder(StartXmlParseStatementConditional(stmt); :} exceptionConditions:conds
-		{: Builder.EndXmlParseStatementConditional() :}
-	|	XmlParseStatement:stmt {: Builder(StartXmlParseStatementConditional(stmt); :} exceptionConditions:conds XmlStatementEnd:end
-		{: Builder.EndXmlParseStatementConditional(end) :}
+		xmlParseStatement:stmt
+		{: my_parser.Builder.EndXmlParseStatementConditional(); :}
+	|	xmlParseStatement:stmt XmlStatementEnd:end
+		{: my_parser.Builder.EndXmlParseStatementConditional(end); :}
+	|	xmlParseStatement:stmt exceptionConditions:conds
+		{: my_parser.Builder.EndXmlParseStatementConditional(); :}
+	|	xmlParseStatement:stmt exceptionConditions:conds XmlStatementEnd:end
+		{: my_parser.Builder.EndXmlParseStatementConditional(end); :}
+	;
+
+xmlParseStatement ::= XmlParseStatement:stmt
+	{: my_parser.Builder.StartXmlParseStatementConditional(stmt); :}
 	;
 
 // Conditional execution of statements
 
-onAtEnd ::= AtEndCondition:cond 
-	{: Builder.StartOnAtEnd(cond); :}
-	statements:stmts
-	{: Builder.EndOnAtEnd(); :}
+onAtEnd ::= atEndCondition:cond statements:stmts
+	{: my_parser.Builder.EndOnAtEnd(); :}
 	;
-noAtEnd ::= NotAtEndCondition:cond 
-	{: Builder.StartNoAtEnd(cond); :}
-	statements:stmts
-	{: Builder.EndNoAtEnd(); :}
+
+atEndCondition ::= AtEndCondition:cond 
+	{: my_parser.Builder.StartOnAtEnd(cond); :}
+	;
+
+noAtEnd ::= notAtEndCondition:cond statements:stmts
+	{: my_parser.Builder.EndNoAtEnd(); :}
+	;
+
+notAtEndCondition ::= NotAtEndCondition:cond 
+	{: my_parser.Builder.StartNoAtEnd(cond); :}
 	;
 
 endConditions ::= onAtEnd:at
@@ -1248,16 +1465,22 @@ endConditions ::= onAtEnd:at
 	{:  :}
 	;
 
-onException ::= OnExceptionCondition:cond 
-	{: Builder.StartOnException(cond); :}
-	statements:stmts
-	{: Builder.EndOnException(); :}
+onException ::= onExceptionCondition:cond statements:stmts
+	{: my_parser.Builder.EndOnException(); :}
 	;
-noException ::= NotOnExceptionCondition:cond 
-	{: Builder.StartNoException(cond); :}
-	statements:stmts
-	{: Builder.EndNoException(); :}
+
+onExceptionCondition ::= OnExceptionCondition:cond 
+	{: my_parser.Builder.StartOnException(cond); :}
 	;
+
+noException ::= notOnExceptionCondition:cond statements:stmts
+	{: my_parser.Builder.EndNoException(); :}
+	;
+
+notOnExceptionCondition ::= NotOnExceptionCondition:cond 
+	{: my_parser.Builder.StartNoException(cond); :}
+	;
+
 exceptionConditions ::= onException:on
 	{:  :}
 	| noException:not_on
@@ -1269,15 +1492,20 @@ exceptionConditions ::= onException:on
 	;
 
 
-onInvalidKey ::= InvalidKeyCondition:cond 
-	{: Builder.StartOnInvalidKey(cond); :}
-	statements:stmts
-	{: Builder.EndOnInvalidKey(); :}
+onInvalidKey ::= invalidKeyCondition:cond statements:stmts
+	{: my_parser.Builder.EndOnInvalidKey(); :}
 	;
-noInvalidKey ::= NotInvalidKeyCondition:cond 
-	{: Builder.StartNoInvalidKey(cond); :}
-	statements:stmts
-	{: Builder.EndNoInvalidKey(); :}
+
+invalidKeyCondition ::= InvalidKeyCondition:cond 
+	{: my_parser.Builder.StartOnInvalidKey(cond); :}
+	;
+
+noInvalidKey ::= notInvalidKeyCondition:cond statements:stmts
+	{: my_parser.Builder.EndNoInvalidKey(); :}
+	;
+
+notInvalidKeyCondition ::= NotInvalidKeyCondition:cond 
+	{: my_parser.Builder.StartNoInvalidKey(cond); :}
 	;
 
 keyConditions ::= onInvalidKey:invalid
@@ -1290,15 +1518,19 @@ keyConditions ::= onInvalidKey:invalid
 	{:  :}
 	;
 
-onOverflow ::= OnOverflowCondition:cond 
-	{: Builder.StartOnOverflow(cond); :}
-		statements:stmts
-	{: Builder.EndOnOverflow(); :}
+onOverflow ::= onOverflowCondition:cond statements:stmts
+	{: my_parser.Builder.EndOnOverflow(); :}
 	;
-noOverflow ::= NotOnOverflowCondition:cond 
-	{: Builder.StartNoOverflow(cond); :}
-	statements:stmts
-	{: Builder.EndNoOverflow(); :}
+onOverflowCondition ::= OnOverflowCondition:cond 
+	{: my_parser.Builder.StartOnOverflow(cond); :}
+	;
+
+noOverflow ::= notOnOverflowCondition:cond statements:stmts
+	{: my_parser.Builder.EndNoOverflow(); :}
+	;
+
+notOnOverflowCondition ::= NotOnOverflowCondition:cond 
+	{: my_parser.Builder.StartNoOverflow(cond); :}
 	;
 
 overflowConditions ::= onOverflow:on
@@ -1311,16 +1543,19 @@ overflowConditions ::= onOverflow:on
 	{:  :}
 	;
 
-onSizeError ::= OnSizeErrorCondition:cond 
-	{: Builder.StartOnSizeError(cond); :}
-	statements:stmts
-	{:  Builder.EndOnSizeError(); :}
+onSizeError ::= onSizeErrorCondition:cond statements:stmts
+	{:  my_parser.Builder.EndOnSizeError(); :}
+	;
+onSizeErrorCondition ::= OnSizeErrorCondition:cond 
+	{: my_parser.Builder.StartOnSizeError(cond); :}
 	;
 
-noSizeError ::= NotOnSizeErrorCondition:cond 
-	{: Builder.StartNoSizeError(cond); :}
-	statements:stmts
-	{:  Builder.EndNoSizeError(); :}
+noSizeError ::= notOnSizeErrorCondition:cond statements:stmts
+	{:  my_parser.Builder.EndNoSizeError(); :}
+	;
+
+notOnSizeErrorCondition ::= NotOnSizeErrorCondition:cond 
+	{: my_parser.Builder.StartNoSizeError(cond); :}
 	;
 
 sizeErrorConditions ::= 
