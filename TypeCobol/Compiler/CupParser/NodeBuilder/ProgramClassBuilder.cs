@@ -78,7 +78,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
 
         public Dictionary<CodeElement, Node> NodeCodeElementLinkers = new Dictionary<CodeElement, Node>();
 
-        private void Enter([NotNull] Node node, CodeElement context = null, SymbolTable table = null)
+        private void Enter(Node node, CodeElement context = null, SymbolTable table = null)
         {
             node.SymbolTable = table ?? SyntaxTree.CurrentNode.SymbolTable;
             SyntaxTree.Enter(node, context);
@@ -757,5 +757,384 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
             Enter(new Exec(stmt), stmt);
             Exit();
         }
+
+        public virtual void StartAddStatementConditional(TypeCobol.Compiler.CodeElements.AddStatement stmt)
+        {
+            Enter(new Add(stmt), stmt);
+        }
+
+        public virtual void EndAddStatementConditional(TypeCobol.Compiler.CodeElements.AddStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartCallStatementConditional(TypeCobol.Compiler.CodeElements.CallStatement stmt)
+        {
+            Enter(new Call(stmt), stmt);
+        }
+
+        public virtual void EndCallStatementConditional(TypeCobol.Compiler.CodeElements.CallStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartComputeStatementConditional(TypeCobol.Compiler.CodeElements.ComputeStatement stmt)
+        {
+            Enter(new Compute(stmt), stmt);
+        }
+
+        public virtual void EndComputeStatementConditional(TypeCobol.Compiler.CodeElements.ComputeStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartOnSizeError(TypeCobol.Compiler.CodeElements.OnSizeErrorCondition cond)
+        {
+            Enter(new OnSizeError(cond), cond);
+        }
+
+        public virtual void EndOnSizeError()
+        {
+            Exit();
+        }
+
+        public virtual void StartNoSizeError(TypeCobol.Compiler.CodeElements.NotOnSizeErrorCondition cond)
+        {
+            Enter(new NoSizeError(cond), cond);
+        }
+
+        public virtual void EndNoSizeError()
+        {
+            Exit();
+        }
+
+        public virtual void StartOnException(TypeCobol.Compiler.CodeElements.OnExceptionCondition cond)
+        {
+            Enter(new OnException(cond), cond);
+        }
+
+        public virtual void EndOnException()
+        {
+            Exit();
+        }
+
+        public virtual void StartNoException(TypeCobol.Compiler.CodeElements.NotOnExceptionCondition cond)
+        {
+            Enter(new NoException(cond), cond);
+        }
+
+        public virtual void EndNoException()
+        {
+            Exit();
+        }
+
+        public virtual void StartOnOverflow(TypeCobol.Compiler.CodeElements.OnOverflowCondition cond)
+        {
+            Enter(new OnOverflow(cond), cond);
+        }
+
+        public virtual void EndOnOverflow()
+        {
+            Exit();
+        }
+
+        public virtual void StartNoOverflow(TypeCobol.Compiler.CodeElements.NotOnOverflowCondition cond)
+        {
+            Enter(new NoOverflow(cond), cond);
+        }
+
+        public virtual void EndNoOverflow()
+        {
+            Exit();
+        }
+
+        public virtual void StartOnInvalidKey(TypeCobol.Compiler.CodeElements.InvalidKeyCondition cond)
+        {
+            Enter(new OnInvalidKey(cond), cond);
+        }
+
+        public virtual void EndOnInvalidKey()
+        {
+            Exit();
+        }
+
+        public virtual void StartNoInvalidKey(TypeCobol.Compiler.CodeElements.NotInvalidKeyCondition cond)
+        {
+            Enter(new NoInvalidKey(cond), cond);
+        }
+
+        public virtual void EndNoInvalidKey()
+        {
+            Exit();
+        }
+
+        public virtual void StartOnAtEnd(TypeCobol.Compiler.CodeElements.AtEndCondition cond)
+        {
+            Enter(new OnAtEnd(cond), cond);
+        }
+
+        public virtual void EndOnAtEnd()
+        {
+            Exit();
+        }
+
+        public virtual void StartNoAtEnd(TypeCobol.Compiler.CodeElements.NotAtEndCondition cond)
+        {
+            Enter(new NoAtEnd(cond), cond);
+        }
+
+        public virtual void EndNoAtEnd()
+        {
+            Exit();
+        }
+
+        public virtual void StartDeleteStatementConditional(TypeCobol.Compiler.CodeElements.DeleteStatement stmt)
+        {
+            Enter(new Delete(stmt), stmt);
+        }
+
+        public virtual void EndDeleteStatementConditional(TypeCobol.Compiler.CodeElements.DeleteStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartDivideStatementConditional(TypeCobol.Compiler.CodeElements.DivideStatement stmt)
+        {
+            Enter(new Divide(stmt), stmt);
+        }
+
+        public virtual void EndDivideStatementConditional(TypeCobol.Compiler.CodeElements.DivideStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartEvaluateStatementWithBody(TypeCobol.Compiler.CodeElements.EvaluateStatement stmt)
+        {
+            Enter(new Evaluate(stmt), stmt);// enter EVALUATE
+        }
+
+        public virtual void EndEvaluateStatementWithBody(TypeCobol.Compiler.CodeElements.EvaluateStatementEnd end)
+        {
+            AttachEndIfExists(end);// exit EVALUATE
+        }
+
+        public virtual void StartWhenConditionClause(List<TypeCobol.Compiler.CodeElements.CodeElement> conditions)
+        {
+            Enter(new WhenGroup(), null);// enter WHEN group
+            Exit();// exit WHEN group
+            foreach(var cond in conditions)
+            {
+                TypeCobol.Compiler.CodeElements.WhenCondition condition = null;
+                if (cond is TypeCobol.Compiler.CodeElements.WhenSearchCondition)
+                {
+                    TypeCobol.Compiler.CodeElements.WhenSearchCondition whensearch =
+                        cond as TypeCobol.Compiler.CodeElements.WhenSearchCondition;
+                    condition = new WhenCondition();
+                    whensearch.ApplyPropertiesToCE(condition);
+
+                    condition.SelectionObjects = new EvaluateSelectionObject[1];
+                    condition.SelectionObjects[0] = new EvaluateSelectionObject();
+                    condition.SelectionObjects[0].BooleanComparisonVariable = new BooleanValueOrExpression(whensearch.Condition);
+                }
+                else
+                {
+                    condition = cond as TypeCobol.Compiler.CodeElements.WhenCondition;
+                }
+                Enter(new When(condition), condition);
+                Exit();
+            }
+            Exit();// exit WHEN group
+            Enter(new Then(), conditions[0]);// enter THEN
+        }
+
+
+        public virtual void EndWhenConditionClause()
+        {
+            Exit();// exit THEN
+        }
+
+        public virtual void StartWhenOtherClause(TypeCobol.Compiler.CodeElements.WhenOtherCondition cond)
+        {
+            Enter(new WhenOther(cond), cond);// enter WHEN OTHER
+        }
+
+        public virtual void EndWhenOtherClause()
+        {
+            Exit();// exit WHEN OTHER
+        }
+
+        public virtual void StartIfStatementWithBody(TypeCobol.Compiler.CodeElements.IfStatement stmt)
+        {
+            Enter(new If(stmt), stmt);
+            Enter(new Then(), stmt);
+        }
+        public virtual void EnterElseClause(TypeCobol.Compiler.CodeElements.ElseCondition clause)
+        {
+            Exit();// we want ELSE to be child of IF, not THEN, so exit THEN
+            Enter(new Else(clause), clause);// ELSE
+        }
+        public virtual void EndIfStatementWithBody(TypeCobol.Compiler.CodeElements.IfStatementEnd end)
+        {
+            Exit(); // Exit ELSE (if any) or THEN
+            AttachEndIfExists(end);
+            // DO NOT Exit() IF node because this will be done in ExitStatement
+        }
+
+        public virtual void AddNextSentenceStatement(TypeCobol.Compiler.CodeElements.NextSentenceStatement stmt)
+        {
+            Enter(new NextSentence(stmt));
+            Exit();
+        }
+
+        public virtual void StartInvokeStatementConditional(TypeCobol.Compiler.CodeElements.InvokeStatement stmt)
+        {
+            Enter(new Invoke(stmt), stmt);
+        }
+
+        public virtual void EndInvokeStatementConditional(TypeCobol.Compiler.CodeElements.InvokeStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartMultiplyStatementConditional(TypeCobol.Compiler.CodeElements.MultiplyStatement stmt)
+        {
+            Enter(new Multiply(stmt), stmt);
+        }
+
+        public virtual void EndMultiplyStatementConditional(TypeCobol.Compiler.CodeElements.MultiplyStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartPerformStatementWithBody(TypeCobol.Compiler.CodeElements.PerformStatement stmt)
+        {
+            Enter(new Perform(stmt), stmt);
+        }
+
+        public virtual void EndPerformStatementWithBody(TypeCobol.Compiler.CodeElements.PerformStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartSearchStatementWithBody([NotNull] TypeCobol.Compiler.CodeElements.SearchStatement stmt)
+        {
+            Enter(new Search(stmt), stmt);
+        }
+
+        public virtual void EndSearchStatementWithBody(TypeCobol.Compiler.CodeElements.SearchStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartWhenSearchConditionClause(TypeCobol.Compiler.CodeElements.WhenSearchCondition condition)
+        {
+            Enter(new WhenSearch(condition), condition);
+        }
+
+        public virtual void EndWhenSearchConditionClause()
+        {
+            Exit(); // WHEN
+        }
+
+        public virtual void EnterReadStatementConditional(TypeCobol.Compiler.CodeElements.ReadStatement stmt)
+        {
+            Enter(new Read(stmt), stmt);
+        }
+
+        public virtual void EndReadStatementConditional(TypeCobol.Compiler.CodeElements.ReadStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void EnterReturnStatementConditional(TypeCobol.Compiler.CodeElements.ReturnStatement stmt)
+        {
+            Enter(new Return(stmt), stmt);
+        }
+
+        public virtual void EndReturnStatementConditional(TypeCobol.Compiler.CodeElements.RewriteStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartRewriteStatementConditional(TypeCobol.Compiler.CodeElements.RewriteStatement stmt)
+        {
+            Enter(new Rewrite(stmt), stmt);
+        }
+
+        public virtual void EndRewriteStatementConditional(TypeCobol.Compiler.CodeElements.RewriteStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartStartStatementConditional(TypeCobol.Compiler.CodeElements.StartStatement stmt)
+        {
+            Enter(new Start(stmt), stmt);
+        }
+
+        public virtual void EndStartStatementConditional(TypeCobol.Compiler.CodeElements.StartStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartStringStatementConditional([NotNull] TypeCobol.Compiler.CodeElements.StringStatement stmt)
+        {
+            Enter(new Nodes.String(stmt), stmt);
+        }
+
+        public virtual void EndStringStatementConditional(TypeCobol.Compiler.CodeElements.StringStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartSubtractStatementConditional(TypeCobol.Compiler.CodeElements.SubtractStatement stmt)
+        {
+            Enter(new Subtract(stmt), stmt);
+        }
+
+        public virtual void EndSubtractStatementConditional(TypeCobol.Compiler.CodeElements.SubtractStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartUnstringStatementConditional(TypeCobol.Compiler.CodeElements.UnstringStatement stmt)
+        {
+            Enter(new Unstring(stmt), stmt);
+        }
+
+        public virtual void EndUnstringStatementConditional(TypeCobol.Compiler.CodeElements.UnstringStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartWriteStatementConditional(TypeCobol.Compiler.CodeElements.WriteStatement stmt)
+        {
+            Enter(new Write(stmt), stmt);
+        }
+
+        public virtual void EndWriteStatementConditional(TypeCobol.Compiler.CodeElements.WriteStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartXmlGenerateStatementConditional([NotNull] TypeCobol.Compiler.CodeElements.XmlGenerateStatement stmt)
+        {
+            Enter(new XmlGenerate(stmt), stmt);
+        }
+
+        public virtual void EndXmlGenerateStatementConditional(TypeCobol.Compiler.CodeElements.XmlStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
+        public virtual void StartXmlParseStatementConditional([NotNull] TypeCobol.Compiler.CodeElements.XmlParseStatement stmt)
+        {
+            Enter(new XmlParse(stmt), stmt);
+        }
+
+        public virtual void EndXmlParseStatementConditional(TypeCobol.Compiler.CodeElements.XmlStatementEnd end)
+        {
+            AttachEndIfExists(end);
+        }
+
     }
 }

@@ -234,8 +234,8 @@ non terminal whenConditionClauses;
 non terminal whenSearchConditionClauses;
 non terminal whenOtherClause;
 non terminal whenSearchConditionClause;
-non terminal whenEvaluateCondition;
-non terminal whenEvaluateConditions;
+non terminal TypeCobol.Compiler.CodeElements.CodeElement whenEvaluateCondition;
+non terminal TypeCobol.Compiler.CupParser.NodeBuilder.CodeElementList whenEvaluateConditions;
 non terminal evaluateStatementWithBody;
 non terminal ifStatementWithBody;
 non terminal invokeStatementConditional;
@@ -787,6 +787,8 @@ statement ::= singleStatement:stmt
 	{:  :}
 	| compoundStatement:stmt
 	{:  :}
+	| error statement /* ERROR Recovery on Statement ==> go to the next statement */
+	{: :}
 	;
 
 singleStatement ::=
@@ -798,57 +800,57 @@ singleStatement ::=
 // -- see computeStatementConditional --
 // -- data movement --
 	| AcceptStatement:stmt // (DATE, DAY, DAY-OF-WEEK, TIME)
-	{:  :} 
+	{: Builder.OnAcceptStatement(stmt); :}
 	| InitializeStatement:stmt
-	{:  :}
+	{: Builder.OnInitializeStatement(stmt); :}
 	| InspectStatement:stmt
-	{:  :}
+	{: Builder.OnInspectStatement(stmt); :}
 	| MoveStatement:stmt
-	{:  :}
+	{: Builder.OnMoveStatement(stmt); :}
 	| SetStatement:stmt
-	{:  :}
+	{: Builder.OnSetStatement(stmt); :}
 // -- ending --
 	| StopStatement:stmt
-	{:  :}
+	{: Builder.OnStopStatement(stmt); :}
 	| ExitMethodStatement:stmt
-	{:  :}
+	{: Builder.OnExitMethodStatement(stmt); :}
 	| ExitProgramStatement:stmt
-	{:  :}
+	{: Builder.OnExitProgramStatement(stmt); :}
 	| GobackStatement:stmt
-	{:  :}
+	{: Builder.OnGobackStatement(stmt); :}
 // -- input-output --
 	| CloseStatement:stmt
-	{:  :}
+	{: Builder.OnCloseStatement(stmt); :}
 	| DisplayStatement:stmt
-	{:  :}
+	{: Builder.OnDisplayStatement(stmt); :}
 	| OpenStatement:stmt
-	{:  :}
+	{: Builder.OnOpenStatement(stmt); :}
 // -- ordering --
 	| MergeStatement:stmt
-	{:  :}
+	{: Builder.OnMergeStatement(stmt); :}
 	| ReleaseStatement:stmt
-	{:  :}
+	{: Builder.OnReleaseStatement(stmt); :}
 	| SortStatement:stmt
-	{:  :}
+	{: Builder.OnSortStatement(stmt); :}
 // -- procedure-branching --
 	| AlterStatement:stmt
-	{:  :}
+	{: Builder.OnAlterStatement(stmt); :}
 	| ExitStatement:stmt
-	{:  :}
+	{: Builder.OnExitStatement(stmt); :}
 	| GotoStatement:stmt
-	{:  :}
+	{: Builder.OnGotoStatement(stmt); :}
 	| PerformProcedureStatement:stmt
-	{:  :}
+	{: Builder.OnPerformProcedureStatement(stmt); :}
 // -- program or method linkage --// TYPECOBOL
 	| ProcedureStyleCall:stmt
-	{:  :}
+	{: Builder.OnProcedureStyleCall(stmt, null); :}
 	| ProcedureStyleCall:stmt CallStatementEnd:end
-	{:  :}
+	{: Builder.OnProcedureStyleCall(stmt, end); :}
 	| CancelStatement:stmt
-	{:  :}
+	{: Builder.OnCancelStatement(stmt); :}
 // -- DB2 & CICS integration --
 	| ExecStatement:stmt
-	{:  :}
+	{: Builder.OnExecStatement(stmt); :}
 	;
 	
 // Statements with optional body  
@@ -898,24 +900,24 @@ compoundStatement ::= addStatementConditional:stmt
 
 addStatementConditional ::=
 		AddStatement:stmt
-		{:  :}
+		{: Builder.StartAddStatementConditional(stmt); Builder.EndAddStatementConditional(); :}
 	|	AddStatement:stmt AddStatementEnd:end
-		{:  :}
-	|	AddStatement:stmt sizeErrorConditions:conds
-		{:  :}
-	|	AddStatement:stmt sizeErrorConditions:conds AddStatementEnd:end
-		{:  :}
+		{: Builder.StartAddStatementConditional(stmt); Builder.EndAddStatementConditional(end); :}
+	|	AddStatement:stmt {: Builder.StartAddStatementConditional(stmt); :} sizeErrorConditions:conds
+		{:  Builder.EndAddStatementConditional(); :}
+	|	AddStatement:stmt {: Builder.StartAddStatementConditional(stmt); :} sizeErrorConditions:conds AddStatementEnd:end
+		{:  Builder.EndAddStatementConditional(end); :}
 	;
 
 callStatementConditional ::=
 		CallStatement:stmt
-		{:  :}
-	|	CallStatement:stmt CallStatementEnd:end
-		{:  :}
-	|	CallStatement:stmt callStatementConditions:conds
-		{:  :}
-	|	CallStatement:stmt callStatementConditions:conds CallStatementEnd:end
-		{:  :}
+		{: Builder.StartCallStatementConditional(stmt); Builder.EndCallStatementConditional(); :}
+	|	CallStatement:stmt {: Builder.StartCallStatementConditional(stmt); :} CallStatementEnd:end
+		{: Builder.EndCallStatementConditional(end); :}
+	|	CallStatement:stmt {: Builder.StartCallStatementConditional(stmt); :} callStatementConditions:conds
+		{: Builder.EndCallStatementConditional(); :}
+	|	CallStatement:stmt {: Builder.StartCallStatementConditional(stmt); :} callStatementConditions:conds CallStatementEnd:end
+		{:  Builder.EndCallStatementConditional(end); :}
 	;
 
 callStatementConditions ::=
@@ -929,54 +931,54 @@ callStatementConditions ::=
 
 computeStatementConditional ::=
 		ComputeStatement:stmt
-		{:  :}
-	|	ComputeStatement:stmt ComputeStatementEnd:end
-		{:  :}
-	|	ComputeStatement:stmt sizeErrorConditions:conds
-		{:  :}
-	|	ComputeStatement:stmt sizeErrorConditions:conds ComputeStatementEnd:end
-		{:  :}
+		{: Builder.StartComputeStatementConditional(stmt); Builder.EndComputeStatementConditional(); :}
+	|	ComputeStatement:stmt {: Builder.StartComputeStatementConditional(stmt); :} ComputeStatementEnd:end
+		{: Builder.EndComputeStatementConditional(end); :}
+	|	ComputeStatement:stmt {: Builder.StartComputeStatementConditional(stmt); :} sizeErrorConditions:conds
+		{: Builder.EndComputeStatementConditional(); :}
+	|	ComputeStatement:stmt {: Builder.StartComputeStatementConditional(stmt); :} sizeErrorConditions:conds ComputeStatementEnd:end
+		{: Builder.EndComputeStatementConditional(end); :}
 	;
 
 deleteStatementConditional ::=
 		DeleteStatement:stmt
-		{:  :}
-	|	DeleteStatement:stmt DeleteStatementEnd:end
-		{:  :}
-	|	DeleteStatement:stmt keyConditions:conds
-		{:  :}
-	|	DeleteStatement:stmt keyConditions:conds DeleteStatementEnd:end
-		{:  :}
+		{: Builder.StartDeleteStatementConditional(stmt); Builder.EndDeleteStatementConditional(); :}
+	|	DeleteStatement:stmt {: Builder.StartDeleteStatementConditional(stmt); :} DeleteStatementEnd:end
+		{: Builder.EndDeleteStatementConditional(end); :}
+	|	DeleteStatement:stmt {: Builder.StartDeleteStatementConditional(stmt); :} keyConditions:conds
+		{: Builder.EndDeleteStatementConditional(); :}
+	|	DeleteStatement:stmt {: Builder.StartDeleteStatementConditional(stmt); :} keyConditions:conds DeleteStatementEnd:end
+		{: Builder.EndDeleteStatementConditional(end); :}
 	;
 
 divideStatementConditional ::=
 		DivideStatement:stmt
-		{:  :}
-	|	DivideStatement:stmt DivideStatementEnd:end
-		{:  :}
-	|	DivideStatement:stmt sizeErrorConditions:conds
-		{:  :}
+		{: Builder.StartDivideStatementConditional(stmt); Builder.EndDivideStatementConditional(); :}
+	|	DivideStatement:stmt {: Builder.StartDivideStatementConditional(stmt); :} DivideStatementEnd:end
+		{: Builder.EndDivideStatementConditional(end); :}
+	|	DivideStatement:stmt {: Builder.StartDivideStatementConditional(stmt); :} sizeErrorConditions:conds
+		{: Builder.EndDivideStatementConditional(); :}
 	|	DivideStatement:stmt sizeErrorConditions:conds DivideStatementEnd:end
-		{:  :}
+		{: Builder.EndDivideStatementConditional(end); :}
 	;
 
 evaluateStatementWithBody ::=
 		EvaluateStatement:est
-		{:  :}
-	|	EvaluateStatement:est EvaluateStatementEnd:ese
-		{:  :}
-	|	EvaluateStatement:est whenConditionClauses:wccs
-		{:  :}
-	|	EvaluateStatement:est whenConditionClauses:wccs EvaluateStatementEnd:ese
-		{:  :}
-	|	EvaluateStatement:est whenOtherClause:woc
-		{:  :}
-	|	EvaluateStatement:est whenOtherClause:woc EvaluateStatementEnd:ese
-		{:  :}
-	|	EvaluateStatement:est whenConditionClauses:wccs whenOtherClause:woc
-		{:  :}
-	|	EvaluateStatement:est whenConditionClauses:wccs whenOtherClause:woc EvaluateStatementEnd:ese
-		{:  :}
+		{: Builder.StartEvaluateStatementWithBody(est); Builder.EndEvaluateStatementWithBody(); :}
+	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} EvaluateStatementEnd:ese
+		{: Builder.EndEvaluateStatementWithBody(ese); :}
+	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} whenConditionClauses:wccs
+		{: Builder.EndEvaluateStatementWithBody(); :}
+	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} whenConditionClauses:wccs  EvaluateStatementEnd:ese
+		{: Builder.EndEvaluateStatementWithBody(ese); :}
+	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} whenOtherClause:woc
+		{: Builder.EndEvaluateStatementWithBody(); :}
+	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} whenOtherClause:woc EvaluateStatementEnd:ese
+		{: Builder.EndEvaluateStatementWithBody(ese); :}
+	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} whenConditionClauses:wccs whenOtherClause:woc
+		{: Builder.EndEvaluateStatementWithBody(); :}
+	|	EvaluateStatement:est {: Builder.StartEvaluateStatementWithBody(est); :} whenConditionClauses:wccs whenOtherClause:woc EvaluateStatementEnd:ese
+		{: Builder.EndEvaluateStatementWithBody(ese); :}
 	;
 
 whenConditionClauses ::= 
@@ -986,100 +988,100 @@ whenConditionClauses ::=
 		{:  :}
 	;
 
-whenConditionClause ::= whenEvaluateConditions:wecs statements:stmts
-	{:  :}
+whenConditionClause ::= whenEvaluateConditions:wecs {: Builder.StartWhenConditionClause(wecs); :} statements:stmts
+	{: Builder.EndWhenConditionClause(); :}
 	;
 
 whenEvaluateCondition ::= WhenSearchCondition:wec
-	{:  :}
+	{: RESULT = wec; :}
 	| WhenCondition:wec
-	{:  :}
+	{: RESULT = wec; :}
 	;
 
 whenEvaluateConditions ::= whenEvaluateCondition:wec
-	{: :}
+	{: RESULT = new CodeElementList(){wec}; :}
 	| whenEvaluateConditions:wecs whenEvaluateCondition:wec
-	{:  :}
+	{: wecs.Add(wec); RESULT = wecs; :}
 	;
 
-whenOtherClause ::= WhenOtherCondition:woc statements:stmts
-	{:  :}
+whenOtherClause ::= WhenOtherCondition:woc {: Builder.StartWhenOtherClause(woc); :} statements:stmts
+	{: Builder.EndWhenOtherClause(); :}
 	;
 
 ifStatementWithBody ::=
-	IfStatement:ifs statements:thenStmts
-	{:  :}
-	| IfStatement:ifs statements:thenStmts IfStatementEnd:end
-	{:  :}
+	IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} statements:thenStmts
+	{: Builder.EndIfStatementWithBody(); :}
+	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} statements:thenStmts IfStatementEnd:end
+	{: Builder.EndIfStatementWithBody(end); :}
 
-	| IfStatement:ifs NextSentenceStatement:thenNext
-	{:  :}
-	| IfStatement:ifs NextSentenceStatement:thenNext IfStatementEnd:end
-	{:  :}
+	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} NextSentenceStatement:thenNext
+	{:  Builder.AddNextSentenceStatement(thenNext); Builder.EndIfStatementWithBody(); :}
+	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} NextSentenceStatement:thenNext IfStatementEnd:end
+	{:  Builder.AddNextSentenceStatement(thenNext); Builder.EndIfStatementWithBody(end); :}
 
-	| IfStatement:ifs statements:thenStmts ElseCondition:ec statements:elseStmts
-	{:  :}
-	| IfStatement:ifs statements:thenStmts ElseCondition:ec NextSentenceStatement:elseNext
-	{:  :}
+	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} statements:thenStmts ElseCondition:ec {: Builder.EnterElseClause(ifs); :} statements:elseStmts
+	{: Builder.EndIfStatementWithBody(); :}
+	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} statements:thenStmts ElseCondition:ec {: Builder.EnterElseClause(ifs); :} NextSentenceStatement:elseNext
+	{:  Builder.AddNextSentenceStatement(elseNext); Builder.EndIfStatementWithBody(); :}
 
-	| IfStatement:ifs statements:thenStmts ElseCondition:ec statements:elseStmts IfStatementEnd:end
-	{:  :}
-	| IfStatement:ifs statements:thenStmts ElseCondition:ec NextSentenceStatement:elseNext IfStatementEnd:end
-	{:  :}
+	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} statements:thenStmts ElseCondition:ec {: Builder.EnterElseClause(ifs); :} statements:elseStmts IfStatementEnd:end
+	{: Builder.EndIfStatementWithBody(end); :}
+	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} statements:thenStmts ElseCondition:ec {: Builder.EnterElseClause(ifs); :} NextSentenceStatement:elseNext IfStatementEnd:end
+	{:  Builder.AddNextSentenceStatement(elseNext); Builder.EndIfStatementWithBody(end); :}
 
-	| IfStatement:ifs NextSentenceStatement:thenNext ElseCondition:ec statements:elseStmts
-	{:  :}
-	| IfStatement:ifs NextSentenceStatement:thenNext ElseCondition:ec NextSentenceStatement:elseNext
-	{: :}
+	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} NextSentenceStatement:thenNext {: Builder.AddNextSentenceStatement(thenNext); :} ElseCondition:ec {: Builder.EnterElseClause(ifs); :} statements:elseStmts
+	{: Builder.EndIfStatementWithBody(); :}
+	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} NextSentenceStatement:thenNext {: Builder.AddNextSentenceStatement(thenNext); :} ElseCondition:ec {: Builder.EnterElseClause(ifs); :} NextSentenceStatement:elseNext
+	{:  Builder.AddNextSentenceStatement(elseNext); Builder.EndIfStatementWithBody(); :}
 
-	| IfStatement:ifs NextSentenceStatement:thenNext ElseCondition:ec statements:elseStmts IfStatementEnd:end
-	{:  :}
-	| IfStatement:ifs NextSentenceStatement:thenNext ElseCondition:ec NextSentenceStatement:elseNext IfStatementEnd:end
-	{:  :}
+	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} NextSentenceStatement:thenNext {: Builder.AddNextSentenceStatement(thenNext); :} ElseCondition:ec {: Builder.EnterElseClause(ifs); :} statements:elseStmts IfStatementEnd:end
+	{: Builder.EndIfStatementWithBody(end); :}
+	| IfStatement:ifs {: Builder.StartIfStatementWithBody(ifs); :} NextSentenceStatement:thenNext {: Builder.AddNextSentenceStatement(thenNext); :} ElseCondition:ec {: Builder.EnterElseClause(ifs); :} NextSentenceStatement:elseNext IfStatementEnd:end
+	{:  Builder.AddNextSentenceStatement(elseNext); Builder.EndIfStatementWithBody(end); :}
 	;
 
 invokeStatementConditional ::=
 		InvokeStatement:stmt
-		{:  :}
-	|	InvokeStatement:stmt InvokeStatementEnd:end
-		{:  :}
-	|	InvokeStatement:stmt exceptionConditions:conds
-		{:  :}
-	|	InvokeStatement:stmt exceptionConditions:conds InvokeStatementEnd:end
-		{:  :}
+		{: Builder.StartInvokeStatementConditional(stmt); Builder.EndInvokeStatementConditional(); :}
+	|	InvokeStatement:stmt {: Builder.StartInvokeStatementConditional(stmt); :} InvokeStatementEnd:end
+		{: Builder.EndInvokeStatementConditional(end); :}
+	|	InvokeStatement:stmt {: Builder.StartInvokeStatementConditional(stmt); :} exceptionConditions:conds
+		{: Builder.EndInvokeStatementConditional(); :}
+	|	InvokeStatement:stmt {: Builder.StartInvokeStatementConditional(stmt); :} exceptionConditions:conds InvokeStatementEnd:end
+		{: Builder.EndInvokeStatementConditional(end); :}
 	;
 
 multiplyStatementConditional ::=
 		MultiplyStatement:stmt
-		{:  :}
-	|	MultiplyStatement:stmt MultiplyStatementEnd:end
-		{:  :}
-	|	MultiplyStatement:stmt sizeErrorConditions:conds
-		{:  :}
-	|	MultiplyStatement:stmt sizeErrorConditions:conds MultiplyStatementEnd:end
-		{:  :}
+		{: Builder.StartMultiplyStatementConditional(stmt); Builder.EndMultiplyStatementConditional(); :}
+	|	MultiplyStatement:stmt {: Builder.StartMultiplyStatementConditional(stmt); :} MultiplyStatementEnd:end
+		{: Builder.EndMultiplyStatementConditional(end); :}
+	|	MultiplyStatement:stmt {: Builder.StartMultiplyStatementConditional(stmt); :} sizeErrorConditions:conds
+		{: Builder.EndMultiplyStatementConditional(); :}
+	|	MultiplyStatement:stmt sizeErrorConditions:conds {: Builder.StartMultiplyStatementConditional(stmt); :} MultiplyStatementEnd:end
+		{: Builder.EndMultiplyStatementConditional(end); :}
 	;
 
 performStatementWithBody ::=			
 		PerformStatement:stmt
-		{:  :}
-	|	PerformStatement:stmt PerformStatementEnd:end
-		{:  :}
-	|	PerformStatement:stmt statements:stmts
-		{:  :}
-	|	PerformStatement:stmt statements:stmts PerformStatementEnd:end
-		{:  :}
+		{: Builder.StartPerformStatementWithBody(stmt); Builder.EndPerformStatementWithBody(); :}
+	|	PerformStatement:stmt {: Builder.StartPerformStatementWithBody(stmt); :} PerformStatementEnd:end
+		{: Builder.EndPerformStatementWithBody(end); :}
+	|	PerformStatement:stmt {: Builder.StartPerformStatementWithBody(stmt); :} statements:stmts
+		{: Builder.EndPerformStatementWithBody(); :}
+	|	PerformStatement:stmt {: Builder.StartPerformStatementWithBody(stmt); :} statements:stmts PerformStatementEnd:end
+		{: Builder.EndPerformStatementWithBody(end); :}
 	;
 
 readStatementConditional ::=
 		ReadStatement:stmt
-		{:  :}
-	|	ReadStatement:stmt ReadStatementEnd:end
-		{:  :}
-	|	ReadStatement:stmt rwStatementConditions:conds
-		{:  :}
-	|	ReadStatement:stmt rwStatementConditions:conds ReadStatementEnd:end
-		{:  :}
+		{: Builder.EnterReadStatementConditional(stmt); Builder.EndReadStatementConditional(); :}
+	|	ReadStatement:stmt {: Builder.EnterReadStatementConditional(stmt); :} ReadStatementEnd:end
+		{: Builder.EndReadStatementConditional(end); :}
+	|	ReadStatement:stmt {: Builder.EnterReadStatementConditional(stmt); :} rwStatementConditions:conds
+		{: Builder.EndReadStatementConditional(); :}
+	|	ReadStatement:stmt {: Builder.EnterReadStatementConditional(stmt); :} rwStatementConditions:conds ReadStatementEnd:end
+		{: Builder.EndReadStatementConditional(end); :}
 	;
 
 rwStatementCondition ::=
@@ -1102,42 +1104,42 @@ rwStatementConditions ::=
 
 returnStatementConditional ::=
 		ReturnStatement:stmt
-		{:  :}
-	|	ReturnStatement:stmt ReturnStatementEnd:end
-		{:  :}
-	|	ReturnStatement:stmt endConditions:conds
-		{:  :}
-	|	ReturnStatement:stmt endConditions:conds ReturnStatementEnd:end
-		{:  :}
+		{: Builder.EnterReturnStatementConditional(stmt); Builder.EndReturnStatementConditional(); :}
+	|	ReturnStatement:stmt {: Builder.EnterReturnStatementConditional(stmt); :} ReturnStatementEnd:end
+		{: Builder.EndReturnStatementConditional(end); :}
+	|	ReturnStatement:stmt {: Builder.EnterReturnStatementConditional(stmt); :} endConditions:conds
+		{: Builder.EndReturnStatementConditional(); :}
+	|	ReturnStatement:stmt {: Builder.EnterReturnStatementConditional(stmt); :} endConditions:conds ReturnStatementEnd:end
+		{: Builder.EndReturnStatementConditional(end); :}
 	;
 
 rewriteStatementConditional ::=
 		RewriteStatement:stmt
-		{:  :}
-	|	RewriteStatement:stmt RewriteStatementEnd:end
-		{:  :}
-	|	RewriteStatement:stmt keyConditions:conds
-		{:  :}
-	|	RewriteStatement:stmt keyConditions:conds RewriteStatementEnd:end
-		{:  :}
+		{: Builder.StartRewriteStatementConditional(stmt); Builder.EndRewriteStatementConditional(); :}
+	|	RewriteStatement:stmt {: Builder.StartRewriteStatementConditional(stmt); :} RewriteStatementEnd:end
+		{: Builder.EndRewriteStatementConditional(end); :}
+	|	RewriteStatement:stmt {: Builder.StartRewriteStatementConditional(stmt); :} keyConditions:conds
+		{: Builder.EndRewriteStatementConditional(); :}
+	|	RewriteStatement:stmt {: Builder.StartRewriteStatementConditional(stmt); :} keyConditions:conds RewriteStatementEnd:end
+		{: Builder.EndRewriteStatementConditional(end); :}
 	;
 
 searchStatementWithBody ::=
-		SearchStatement:stmt whenSearchConditionClauses:wsccs
-		{:  :}
-	|	SearchStatement:stmt whenSearchConditionClauses:wsccs SearchStatementEnd:send
-		{:  :}
-	|	SearchStatement:stmt onAtEnd:cend whenSearchConditionClauses:wsccs
-		{:  :}
-	|	SearchStatement:stmt onAtEnd:cend whenSearchConditionClauses:wsccs SearchStatementEnd:send
-		{:  :}
+		SearchStatement:stmt {: Builder.StartSearchStatementWithBody(stmt); :} whenSearchConditionClauses:wsccs
+		{: Builder.EndSearchStatementWithBody(); :}
+	|	SearchStatement:stmt {: Builder.StartSearchStatementWithBody(stmt); :} whenSearchConditionClauses:wsccs SearchStatementEnd:send
+		{: Builder.EndSearchStatementWithBody(end); :}
+	|	SearchStatement:stmt {: Builder.StartSearchStatementWithBody(stmt); :} onAtEnd:cend whenSearchConditionClauses:wsccs
+		{: Builder.EndSearchStatementWithBody(); :}
+	|	SearchStatement:stmt {: Builder.StartSearchStatementWithBody(stmt); :} onAtEnd:cend whenSearchConditionClauses:wsccs SearchStatementEnd:send
+		{: Builder.EndSearchStatementWithBody(end); :}
 	;
 
 whenSearchConditionClause ::= 
-		WhenSearchCondition:wsc statements:stmts
-		{:  :}
-	|	WhenSearchCondition:wsc NextSentenceStatement:next
-		{:  :}
+		WhenSearchCondition:wsc {: Builder.StartWhenSearchConditionClause(wsc); :} statements:stmts
+		{: Builder.EndWhenSearchConditionClause(); :}
+	|	WhenSearchCondition:wsc {: Builder.StartWhenSearchConditionClause(wsc); :} NextSentenceStatement:next
+		{: Builder.AddNextSentenceStatement(); Builder.EndWhenSearchConditionClause(); :}
 	;
 
 whenSearchConditionClauses ::= whenSearchConditionClause:wscc
@@ -1148,89 +1150,94 @@ whenSearchConditionClauses ::= whenSearchConditionClause:wscc
 
 startStatementConditional ::=
 		StartStatement:stmt
-		{:  :}
-	|	StartStatement:stmt StartStatementEnd:end
-		{:  :}
-	|	StartStatement:stmt keyConditions:conds
-		{:  :}
-	|	StartStatement:stmt keyConditions:conds StartStatementEnd:end
-		{:  :}
+		{: Builder.StartStartStatementConditional(stmt); Builder.EndStartStatementConditional(); :}
+	|	StartStatement:stmt {: Builder.StartStartStatementConditional(stmt); :} StartStatementEnd:end
+		{: Builder.EndStartStatementConditional(end); :}
+	|	StartStatement:stmt {: Builder.StartStartStatementConditional(stmt); :} keyConditions:conds
+		{: Builder.EndStartStatementConditional(); :}
+	|	StartStatement:stmt {: Builder.StartStartStatementConditional(stmt); :} keyConditions:conds StartStatementEnd:end
+		{: Builder.EndStartStatementConditional(end); :}
 	;
 
 stringStatementConditional ::=
 		StringStatement:stmt
-		{:  :}
-	|	StringStatement:stmt StringStatementEnd:end
-		{:  :}
-	|	StringStatement:stmt overflowConditions:conds
-		{:  :}
-	|	StringStatement:stmt overflowConditions:conds StringStatementEnd:end
-		{:  :}
+		{: Builder.StartStringStatementConditional(stmt); Builder.EndStringStatementConditional(); :}
+	|	StringStatement:stmt {: Builder.StartStringStatementConditional(stmt); :} StringStatementEnd:end
+		{: Builder.EndStringStatementConditional(end); :}
+	|	StringStatement:stmt {: Builder.StartStringStatementConditional(stmt); :} overflowConditions:conds
+		{: Builder.EndStringStatementConditional(); :}
+	|	StringStatement:stmt {: Builder.StartStringStatementConditional(stmt); :} overflowConditions:conds StringStatementEnd:end
+		{: Builder.EndStringStatementConditional(end); :}
 	;
 
 subtractStatementConditional ::=
 		SubtractStatement:stmt
-		{:  :}
-	|	SubtractStatement:stmt SubtractStatementEnd:end
-		{:  :}
-	|	SubtractStatement:stmt sizeErrorConditions:conds
-		{:  :}
-	|	SubtractStatement:stmt sizeErrorConditions:conds SubtractStatementEnd:end
-		{:  :}
+		{: Builder.StartSubtractStatementConditional(stmt); Builder.EndSubtractStatementConditional(); :}
+	|	SubtractStatement:stmt {: Builder.StartSubtractStatementConditional(stmt); :} SubtractStatementEnd:end
+		{: Builder.EndSubtractStatementConditional(end); :}
+	|	SubtractStatement:stmt {: Builder.StartSubtractStatementConditional(stmt); :} sizeErrorConditions:conds
+		{: Builder.EndSubtractStatementConditional(); :}
+	|	SubtractStatement:stmt {: Builder.StartSubtractStatementConditional(stmt); :} sizeErrorConditions:conds SubtractStatementEnd:end
+		{: Builder.EndSubtractStatementConditional(end); :}
 	;
 
 unstringStatementConditional ::=
 		UnstringStatement:stmt
-		{:  :}
-	|	UnstringStatement:stmt UnstringStatementEnd:end
-		{:  :}
-	|	UnstringStatement:stmt overflowConditions:conds
-		{:  :}
-	|	UnstringStatement:stmt overflowConditions:conds UnstringStatementEnd:end
-		{:  :}
+		{: Builder.StartUnstringStatementConditional(); Builder.EndUnstringStatementConditional(); :}
+	|	UnstringStatement:stmt {: Builder.StartUnstringStatementConditional(); :} UnstringStatementEnd:end
+		{: Builder.EndUnstringStatementConditional(end); :}
+	|	UnstringStatement:stmt {: Builder.StartUnstringStatementConditional(); :} overflowConditions:conds
+		{: Builder.EndUnstringStatementConditional(); :}
+	|	UnstringStatement:stmt {: Builder.StartUnstringStatementConditional(); :} overflowConditions:conds UnstringStatementEnd:end
+		{: Builder.EndUnstringStatementConditional(end); :}
 	;
 
 writeStatementConditional ::=
 		WriteStatement:stmt
-		{:  :}
-	|	WriteStatement:stmt WriteStatementEnd:end
-		{:  :}
-	|	WriteStatement:stmt rwStatementConditions:conds
-		{:  :}
-	|	WriteStatement:stmt rwStatementConditions:conds WriteStatementEnd:end
-		{:  :}
+		{: Builder.StartWriteStatementConditional(stmt); Builder.EndWriteStatementConditional(); :}
+	|	WriteStatement:stmt {: Builder.StartWriteStatementConditional(stmt); :} WriteStatementEnd:end
+		{: Builder.EndWriteStatementConditional(end); :}
+	|	WriteStatement:stmt {: Builder.StartWriteStatementConditional(stmt); :} rwStatementConditions:conds
+		{: Builder.EndWriteStatementConditional(); :}
+	|	WriteStatement:stmt {: Builder.StartWriteStatementConditional(stmt); :} rwStatementConditions:conds WriteStatementEnd:end
+		{: Builder.EndWriteStatementConditional(end); :}
 	;
 
 xmlGenerateStatementConditional ::=
 		XmlGenerateStatement:stmt
-		{:  :}
-	|	XmlGenerateStatement:stmt XmlStatementEnd:end
-		{:  :}
-	|	XmlGenerateStatement:stmt exceptionConditions:conds
-		{:  :}
-	|	XmlGenerateStatement:stmt exceptionConditions:conds XmlStatementEnd:end
-		{:  :}
+		{: Builder(StartXmlGenerateStatementConditional(stmt); Builder.EndXmlGenerateStatementConditional() :}
+	|	XmlGenerateStatement:stmt {: Builder(StartXmlGenerateStatementConditional(stmt); :} XmlStatementEnd:end
+		{: Builder.EndXmlGenerateStatementConditional(end) :}
+	|	XmlGenerateStatement:stmt {: Builder(StartXmlGenerateStatementConditional(stmt); :} exceptionConditions:conds
+		{: Builder.EndXmlGenerateStatementConditional() :}
+	|	XmlGenerateStatement:stmt {: Builder(StartXmlGenerateStatementConditional(stmt); :} exceptionConditions:conds XmlStatementEnd:end
+		{: Builder.EndXmlGenerateStatementConditional(end) :}
 	;
 
 xmlParseStatementConditional ::=
 		XmlParseStatement:stmt
-		{:  :}
-	|	XmlParseStatement:stmt XmlStatementEnd:end
-		{:  :}
-	|	XmlParseStatement:stmt exceptionConditions:conds
-		{:  :}
-	|	XmlParseStatement:stmt exceptionConditions:conds XmlStatementEnd:end
-		{:  :}
+		{: Builder(StartXmlParseStatementConditional(stmt); Builder.EndXmlParseStatementConditional() :}
+	|	XmlParseStatement:stmt {: Builder(StartXmlParseStatementConditional(stmt); :} XmlStatementEnd:end
+		{: Builder.EndXmlParseStatementConditional(end) :}
+	|	XmlParseStatement:stmt {: Builder(StartXmlParseStatementConditional(stmt); :} exceptionConditions:conds
+		{: Builder.EndXmlParseStatementConditional() :}
+	|	XmlParseStatement:stmt {: Builder(StartXmlParseStatementConditional(stmt); :} exceptionConditions:conds XmlStatementEnd:end
+		{: Builder.EndXmlParseStatementConditional(end) :}
 	;
 
 // Conditional execution of statements
 
-onAtEnd ::= AtEndCondition:cond statements:stmts
-	{:  :}
+onAtEnd ::= AtEndCondition:cond 
+	{: Builder.StartOnAtEnd(cond); :}
+	statements:stmts
+	{: Builder.EndOnAtEnd(); :}
 	;
-noAtEnd ::= NotAtEndCondition:cond statements:stmts
-	{:  :}
+noAtEnd ::= NotAtEndCondition:cond 
+	{: Builder.StartNoAtEnd(cond); :}
+	statements:stmts
+	{: Builder.EndNoAtEnd(); :}
 	;
+
 endConditions ::= onAtEnd:at
 	{:  :}
 	| noAtEnd:no_at
@@ -1241,11 +1248,15 @@ endConditions ::= onAtEnd:at
 	{:  :}
 	;
 
-onException ::= OnExceptionCondition:cond statements:stmts
-	{:  :}
+onException ::= OnExceptionCondition:cond 
+	{: Builder.StartOnException(cond); :}
+	statements:stmts
+	{: Builder.EndOnException(); :}
 	;
-noException ::= NotOnExceptionCondition:cond statements:stmts
-	{:  :}
+noException ::= NotOnExceptionCondition:cond 
+	{: Builder.StartNoException(cond); :}
+	statements:stmts
+	{: Builder.EndNoException(); :}
 	;
 exceptionConditions ::= onException:on
 	{:  :}
@@ -1258,12 +1269,17 @@ exceptionConditions ::= onException:on
 	;
 
 
-onInvalidKey ::= InvalidKeyCondition:cond statements:stmts
-	{:  :}
+onInvalidKey ::= InvalidKeyCondition:cond 
+	{: Builder.StartOnInvalidKey(cond); :}
+	statements:stmts
+	{: Builder.EndOnInvalidKey(); :}
 	;
-noInvalidKey ::= NotInvalidKeyCondition:cond statements:stmts
-	{:  :}
+noInvalidKey ::= NotInvalidKeyCondition:cond 
+	{: Builder.StartNoInvalidKey(cond); :}
+	statements:stmts
+	{: Builder.EndNoInvalidKey(); :}
 	;
+
 keyConditions ::= onInvalidKey:invalid
 	{:  :}
 	| noInvalidKey:not_invalid
@@ -1274,12 +1290,17 @@ keyConditions ::= onInvalidKey:invalid
 	{:  :}
 	;
 
-onOverflow ::= OnOverflowCondition:cond statements:stmts
-	{:  :}
+onOverflow ::= OnOverflowCondition:cond 
+	{: Builder.StartOnOverflow(cond); :}
+		statements:stmts
+	{: Builder.EndOnOverflow(); :}
 	;
-noOverflow ::= NotOnOverflowCondition:cond statements:stmts
-	{:  :}
+noOverflow ::= NotOnOverflowCondition:cond 
+	{: Builder.StartNoOverflow(cond); :}
+	statements:stmts
+	{: Builder.EndNoOverflow(); :}
 	;
+
 overflowConditions ::= onOverflow:on
 	{:  :}
 	| noOverflow:not_on
@@ -1290,19 +1311,25 @@ overflowConditions ::= onOverflow:on
 	{:  :}
 	;
 
-onSizeError ::= OnSizeErrorCondition:cond statements:stmts
-	{:  :}
+onSizeError ::= OnSizeErrorCondition:cond 
+	{: Builder.StartOnSizeError(cond); :}
+	statements:stmts
+	{:  Builder.EndOnSizeError(); :}
 	;
-noSizeError ::= NotOnSizeErrorCondition:cond statements:stmts
-	{:  :}
+
+noSizeError ::= NotOnSizeErrorCondition:cond 
+	{: Builder.StartNoSizeError(cond); :}
+	statements:stmts
+	{:  Builder.EndNoSizeError(); :}
 	;
+
 sizeErrorConditions ::= 
 	  onSizeError:on
-	{:  :}
+		{: :}
 	| noSizeError:not_on
-	{:  :}
+		{: :}
 	| sizeErrorConditions:seconds onSizeError:on
-	{:  :}
+		{: :}
 	| sizeErrorConditions:seconds noSizeError:not_on
-	{:  :}
+		{: :}
 	;
