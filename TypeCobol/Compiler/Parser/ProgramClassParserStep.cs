@@ -13,6 +13,8 @@ using TypeCobol.Compiler.Text;
 using TypeCobol.Compiler.Nodes;
 using System.Linq;
 using TypeCobol.Compiler.CodeElements;
+using TypeCobol.Compiler.CupParser;
+using TypeCobol.Compiler.CupParser.NodeBuilder;
 
 namespace TypeCobol.Compiler.Parser
 {
@@ -97,6 +99,52 @@ namespace TypeCobol.Compiler.Parser
             if (syntaxTreeDiag != null)
                 diagnostics.AddRange(syntaxTreeDiag);
             nodeCodeElementLinkers = programClassBuilder.NodeCodeElementLinkers;
+
+            if (programClassBuilderError != null)
+            {
+                diagnostics.Add(programClassBuilderError);
+            }
+        }
+
+        public static void CupParseProgramOrClass(TextSourceInfo textSourceInfo, ISearchableReadOnlyList<CodeElementsLine> codeElementsLines, TypeCobolOptions compilerOptions, SymbolTable customSymbols, PerfStatsForParserInvocation perfStatsForParserInvocation, out SourceFile root, out List<Diagnostic> diagnostics, out Dictionary<CodeElement, Node> nodeCodeElementLinkers)
+        {
+            CodeElementTokenizer scanner = new CodeElementTokenizer(codeElementsLines);
+            TypeCobolProgramParser parser = new TypeCobolProgramParser(scanner);
+            CupParserTypeCobolProgramDiagnosticErrorReporter diagReporter = new CupParserTypeCobolProgramDiagnosticErrorReporter();
+            parser.ErrorReporter = new CupParserTypeCobolProgramDiagnosticErrorReporter(); ;
+            ProgramClassBuilder builder = new ProgramClassBuilder();
+            parser.Builder = builder;
+            ParserDiagnostic programClassBuilderError = null;
+
+            builder.SyntaxTree = new SyntaxTree<CodeElement>(); //Initializie SyntaxTree for the current source file
+            builder.CustomSymbols = customSymbols;
+            builder.Dispatcher = new NodeDispatcher<CodeElement>();
+            builder.Dispatcher.CreateListeners();
+
+            // Try to parse a Cobol program or class
+            perfStatsForParserInvocation.OnStartTreeBuilding();
+
+            try
+            {
+                TUVienna.CS_CUP.Runtime.Symbol symbol = parser.parse();
+            }
+            catch (Exception ex)
+            {
+                var code = Diagnostics.MessageCode.ImplementationError;
+                programClassBuilderError = new ParserDiagnostic(ex.ToString(), null, null, code, ex);
+            }
+
+            root = builder.SyntaxTree.Root; //Set output root node
+
+            //Create link between data definition an Types, will be stored in SymbolTable
+            root.AcceptASTVisitor(new TypeCobolLinker());
+
+            //Stop measuring tree building performance
+            perfStatsForParserInvocation.OnStopTreeBuilding();
+
+            // Register compiler results
+            diagnostics = diagReporter.Diagnostics ?? new List<Diagnostic>();
+            nodeCodeElementLinkers = builder.NodeCodeElementLinkers;
 
             if (programClassBuilderError != null)
             {

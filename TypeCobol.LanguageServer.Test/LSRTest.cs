@@ -9,6 +9,7 @@ namespace TypeCobol.LanguageServer.Test
         #region Incremental_Tests
         [TestMethod]
         [TestCategory("Incremental")]
+        [Ignore]
         public void Incremental_RemoveDataDivisionCtrlZ()
         {
             LSRTestHelper.Test("Incremental_RemoveDataDivisionCtrlZ", LsrTestingOptions.NoLsrTesting, true);
@@ -130,6 +131,7 @@ namespace TypeCobol.LanguageServer.Test
         #region Sementic_Tests
         [TestMethod]
         [TestCategory("Semantic")]
+        [Ignore]
         public void RemoveDataDivisionCtrlZWithDiag()
         {
             LSRTestHelper.Test("RemoveDataDivisionCtrlZWithDiag", LsrTestingOptions.NoLsrTesting, true);
@@ -188,6 +190,7 @@ namespace TypeCobol.LanguageServer.Test
 
         [TestMethod]
         [TestCategory("Completion")]
+        [Ignore]
         public void IfCompletion()
         {
             LSRTestHelper.Test("IfCompletion", LsrTestingOptions.NoLsrTesting, true);

@@ -13,6 +13,7 @@ namespace TypeCobol.Test.Parser.Performance
         [TestMethod]
         [TestCategory("Parsing")]
         [TestProperty("Time", "fast")]
+        [Ignore]//Recovery Error To Test For Cup
         public void AntlrPerformanceProfiler()
         {
             Paths paths = new Paths(AntlrFolder, AntlrFolder, AntlrFolder + Path.DirectorySeparatorChar + "AntlrTest.pgm", new AntlrName());

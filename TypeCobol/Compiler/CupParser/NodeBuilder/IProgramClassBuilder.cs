@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TypeCobol.Compiler.CodeElements;
 using JetBrains.Annotations;
+using TypeCobol.Compiler.Nodes;
 
 namespace TypeCobol.Compiler.CupParser.NodeBuilder
 {
@@ -27,6 +28,11 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
     /// </summary>
     public interface IProgramClassBuilder
     {
+        /// <summary>
+        /// Starts a compilation unit.
+        /// </summary>
+        void StartCobolCompilationUnit();
+
         /// <summary>
         /// Start a Cobol Program
         /// </summary>
@@ -174,6 +180,11 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         void EndFileDescriptionEntry();
 
         /// <summary>
+        /// End a File Description Entry if one is pending
+        /// </summary>
+        void EndFileDescriptionEntryIfAny();
+
+        /// <summary>
         /// Start DataDescriptionEntry
         /// </summary>
         /// <param name="entry">The DataDescriptionEntry code element</param>
@@ -192,7 +203,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         /// Start DataConditionEntry
         /// </summary>
         /// <param name="entry">The DataConditionEntry code element</param>
-        void StarDataConditionEntry([NotNull] DataConditionEntry entry);
+        void StartDataConditionEntry([NotNull] DataConditionEntry entry);
 
         /// <summary>
         /// Start a TypeCobol Type Definition entry
@@ -312,7 +323,12 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         /// <summary>
         /// End a sentence
         /// </summary>
-        void EndSentence(SentenceEnd end);
+        void EndSentence(SentenceEnd end, bool bCheck = false);
+
+        /// <summary>
+        /// Checks if the last statement being entered must leads to the start of a sentence.
+        /// </summary>
+        void CheckStartSentenceLastStatement();
 
         /// <summary>
         /// Start an Exec Statement

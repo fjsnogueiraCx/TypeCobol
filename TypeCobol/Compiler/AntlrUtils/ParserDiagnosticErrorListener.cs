@@ -39,6 +39,7 @@ namespace TypeCobol.Compiler.AntlrUtils
 
             // Create a new diagnostic object
             ParserDiagnostic diagnostic = new ParserDiagnostic(msg, offendingSymbol, ruleStack.ToString());
+            //System.Diagnostics.Debug.WriteLine(msg);
 
             // Attach this diagnostic to the current parse tree rule
             var parser = (Antlr4.Runtime.Parser)recognizer;

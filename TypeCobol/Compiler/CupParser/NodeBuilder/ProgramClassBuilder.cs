@@ -78,13 +78,22 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
 
         public Dictionary<CodeElement, Node> NodeCodeElementLinkers = new Dictionary<CodeElement, Node>();
 
+        /// <summary>
+        /// The Last entered node.
+        /// </summary>
+        public Node LastEnteredNode
+        {
+            get;
+            private set;
+        }
+
         private void Enter(Node node, CodeElement context = null, SymbolTable table = null)
         {
             node.SymbolTable = table ?? SyntaxTree.CurrentNode.SymbolTable;
             SyntaxTree.Enter(node, context);
 
             if (node.CodeElement != null)
-                NodeCodeElementLinkers.Add(node.CodeElement, node);
+                NodeCodeElementLinkers.Add(node.CodeElement, node);            
         }
 
         private void Exit()
@@ -93,13 +102,16 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
             var context = SyntaxTree.CurrentContext;
             Dispatcher.OnNode(node, context, CurrentProgram);
             SyntaxTree.Exit();
+            LastEnteredNode = node;
         }
 
         private void AttachEndIfExists(CodeElementEnd end)
         {
-            if (end == null) return;
-            Enter(new End(end));
-            Exit();
+            if (end != null)
+            {
+                Enter(new End(end));
+                Exit();
+            }
         }
 
         private Node GetTopLevelItem(long level)
@@ -158,6 +170,17 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
                 table = table.GetTableFromScope(SymbolTable.Scope.Global);
 
             table.AddVariable(node);
+        }
+
+        public virtual void StartCobolCompilationUnit()
+        {
+            if (TableOfNamespaces == null)
+                TableOfNamespaces = new SymbolTable(TableOfIntrisic, SymbolTable.Scope.Namespace);
+
+            TableOfGlobals = new SymbolTable(TableOfNamespaces, SymbolTable.Scope.Global);
+            Program = null;
+
+            SyntaxTree.Root.SymbolTable = TableOfNamespaces; //Set SymbolTable of SourceFile Node, Limited to NameSpace and Intrinsic scopes
         }
 
         public virtual void StartCobolProgram(ProgramIdentification programIdentification, LibraryCopyCodeElement libraryCopy)
@@ -318,7 +341,16 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
 
         public virtual void EndFileDescriptionEntry()
         {
+            ExitLastLevel1Definition();
             Exit();
+        }
+
+        public virtual void EndFileDescriptionEntryIfAny()
+        {
+            if (this.CurrentNode is FileDescriptionEntryNode)
+            {
+                EndFileDescriptionEntry();
+            }
         }
 
         public virtual void StartDataDescriptionEntry(DataDescriptionEntry entry)
@@ -406,7 +438,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
             if (!node.IsPartOfATypeDef) node.SymbolTable.AddVariable(node);
         }
 
-        public virtual void StarDataConditionEntry(DataConditionEntry entry)
+        public virtual void StartDataConditionEntry(DataConditionEntry entry)
         {
             SetCurrentNodeToTopLevelItem(entry.LevelNumber);
             var node = new DataCondition(entry);
@@ -597,10 +629,39 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
             Enter(new Sentence(), null);
         }
 
-        public virtual void EndSentence(SentenceEnd end)
+        public virtual void EndSentence(SentenceEnd end, bool bCheck)
         {
+            //if (bCheck)
+            //{
+            //    if (CurrentNode is ProcedureDivision || CurrentNode is Paragraph)
+            //        return;
+            //    else
+            //        return;
+            //}
             AttachEndIfExists(end);
             if (CurrentNode is Sentence) Exit();//TODO remove this and check what happens when exiting last CALL in FIN-STANDARD in BigBatch file (ie. CheckPerformance test)
+        }
+
+        /// <summary>
+        /// Checks if the last statement being entered must leads to the start of a sentence.
+        /// </summary>
+        public virtual void CheckStartSentenceLastStatement()
+        {
+            if (LastEnteredNode != null)
+            {
+                Node parent = LastEnteredNode.Parent;
+                if (parent is Paragraph || parent is ProcedureDivision)
+                {   //JCM Hack: So in this case the statement must be given as parent a Sentence Node.
+                    //This hack is perform because using the Enter/Exit mechanism to create a Syntax Tree
+                    //Is not appropriate with LALR(1) grammar, because there is not start token that can telle
+                    //The beginning of  list of statement that belongs to a sentence.
+                    //So we check if the statement is part of a paragraph or a procedure division.
+                    parent.Remove(LastEnteredNode);
+                    //Start a sentence
+                    StartSentence();
+                    CurrentNode.Add(LastEnteredNode);                    
+                }
+            }
         }
 
         public virtual void StartExecStatement(ExecStatement execStmt)
@@ -747,9 +808,9 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
 
         public virtual void OnProcedureStyleCall(ProcedureStyleCallStatement stmt, CallStatementEnd end)
         {
-            Enter(new ProcedureStyleCall(stmt), stmt);
-            Exit();
+            Enter(new ProcedureStyleCall(stmt), stmt);            
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void OnExecStatement(ExecStatement stmt)
@@ -766,6 +827,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndAddStatementConditional(TypeCobol.Compiler.CodeElements.AddStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartCallStatementConditional(TypeCobol.Compiler.CodeElements.CallStatement stmt)
@@ -776,6 +838,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndCallStatementConditional(TypeCobol.Compiler.CodeElements.CallStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartComputeStatementConditional(TypeCobol.Compiler.CodeElements.ComputeStatement stmt)
@@ -786,6 +849,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndComputeStatementConditional(TypeCobol.Compiler.CodeElements.ComputeStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartOnSizeError(TypeCobol.Compiler.CodeElements.OnSizeErrorCondition cond)
@@ -896,6 +960,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndDeleteStatementConditional(TypeCobol.Compiler.CodeElements.DeleteStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartDivideStatementConditional(TypeCobol.Compiler.CodeElements.DivideStatement stmt)
@@ -906,6 +971,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndDivideStatementConditional(TypeCobol.Compiler.CodeElements.DivideStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartEvaluateStatementWithBody(TypeCobol.Compiler.CodeElements.EvaluateStatement stmt)
@@ -916,12 +982,12 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndEvaluateStatementWithBody(TypeCobol.Compiler.CodeElements.EvaluateStatementEnd end)
         {
             AttachEndIfExists(end);// exit EVALUATE
+            Exit();
         }
 
         public virtual void StartWhenConditionClause(List<TypeCobol.Compiler.CodeElements.CodeElement> conditions)
         {
             Enter(new WhenGroup(), null);// enter WHEN group
-            Exit();// exit WHEN group
             foreach(var cond in conditions)
             {
                 TypeCobol.Compiler.CodeElements.WhenCondition condition = null;
@@ -978,6 +1044,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
             Exit(); // Exit ELSE (if any) or THEN
             AttachEndIfExists(end);
             // DO NOT Exit() IF node because this will be done in ExitStatement
+            Exit();//JCM exit any way ???
         }
 
         public virtual void AddNextSentenceStatement(TypeCobol.Compiler.CodeElements.NextSentenceStatement stmt)
@@ -994,6 +1061,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndInvokeStatementConditional(TypeCobol.Compiler.CodeElements.InvokeStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartMultiplyStatementConditional(TypeCobol.Compiler.CodeElements.MultiplyStatement stmt)
@@ -1004,6 +1072,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndMultiplyStatementConditional(TypeCobol.Compiler.CodeElements.MultiplyStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartPerformStatementWithBody(TypeCobol.Compiler.CodeElements.PerformStatement stmt)
@@ -1014,6 +1083,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndPerformStatementWithBody(TypeCobol.Compiler.CodeElements.PerformStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartSearchStatementWithBody([NotNull] TypeCobol.Compiler.CodeElements.SearchStatement stmt)
@@ -1024,6 +1094,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndSearchStatementWithBody(TypeCobol.Compiler.CodeElements.SearchStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartWhenSearchConditionClause(TypeCobol.Compiler.CodeElements.WhenSearchCondition condition)
@@ -1044,6 +1115,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndReadStatementConditional(TypeCobol.Compiler.CodeElements.ReadStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void EnterReturnStatementConditional(TypeCobol.Compiler.CodeElements.ReturnStatement stmt)
@@ -1054,6 +1126,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndReturnStatementConditional(TypeCobol.Compiler.CodeElements.ReturnStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartRewriteStatementConditional(TypeCobol.Compiler.CodeElements.RewriteStatement stmt)
@@ -1064,6 +1137,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndRewriteStatementConditional(TypeCobol.Compiler.CodeElements.RewriteStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartStartStatementConditional(TypeCobol.Compiler.CodeElements.StartStatement stmt)
@@ -1074,6 +1148,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndStartStatementConditional(TypeCobol.Compiler.CodeElements.StartStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartStringStatementConditional([NotNull] TypeCobol.Compiler.CodeElements.StringStatement stmt)
@@ -1084,6 +1159,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndStringStatementConditional(TypeCobol.Compiler.CodeElements.StringStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartSubtractStatementConditional(TypeCobol.Compiler.CodeElements.SubtractStatement stmt)
@@ -1094,6 +1170,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndSubtractStatementConditional(TypeCobol.Compiler.CodeElements.SubtractStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartUnstringStatementConditional(TypeCobol.Compiler.CodeElements.UnstringStatement stmt)
@@ -1104,6 +1181,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndUnstringStatementConditional(TypeCobol.Compiler.CodeElements.UnstringStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartWriteStatementConditional(TypeCobol.Compiler.CodeElements.WriteStatement stmt)
@@ -1114,6 +1192,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndWriteStatementConditional(TypeCobol.Compiler.CodeElements.WriteStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartXmlGenerateStatementConditional([NotNull] TypeCobol.Compiler.CodeElements.XmlGenerateStatement stmt)
@@ -1124,6 +1203,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndXmlGenerateStatementConditional(TypeCobol.Compiler.CodeElements.XmlStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
         public virtual void StartXmlParseStatementConditional([NotNull] TypeCobol.Compiler.CodeElements.XmlParseStatement stmt)
@@ -1134,6 +1214,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
         public virtual void EndXmlParseStatementConditional(TypeCobol.Compiler.CodeElements.XmlStatementEnd end)
         {
             AttachEndIfExists(end);
+            Exit();
         }
 
     }

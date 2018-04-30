@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TypeCobol.Compiler.CodeElements;
 using TypeCobol.Compiler.Concurrency;
 using TypeCobol.Compiler.Parser;
 
@@ -83,6 +84,27 @@ namespace TypeCobol.Compiler.CupParser
                 i++;
             }
             yield return EOF;
+        }
+
+        /// <summary>
+        /// Get the string representation of a CodeElementType
+        /// </summary>
+        /// <param name="ceType"></param>
+        /// <returns></returns>
+        public static string ToString(CodeElementType ceType)
+        {         
+            string name = System.Enum.GetName(typeof(CodeElementType), ceType);
+            return name;
+        }
+
+        /// <summary>
+        /// Get the string representation of the CodeElementType correponding to a Cup Token.
+        /// </summary>
+        /// <param name="token"></param>
+        /// <returns></returns>
+        public static string CupTokenToString(int token)
+        {
+            return ToString((CodeElementType) (token - CS_CUP_START_TOKEN + 1));
         }
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()

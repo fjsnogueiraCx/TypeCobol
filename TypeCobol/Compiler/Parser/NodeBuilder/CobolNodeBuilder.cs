@@ -806,7 +806,8 @@ namespace TypeCobol.Compiler.Parser
         private bool skipEmptyStatement = false;
         public override void ExitStatement(ProgramClassParser.StatementContext context)
         {
-            if (skipEmptyStatement) skipEmptyStatement = false;
+            if (skipEmptyStatement)
+                skipEmptyStatement = false;
             else Exit();
         }
         /*TODO#249

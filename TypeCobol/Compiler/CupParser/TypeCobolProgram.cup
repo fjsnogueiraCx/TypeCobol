@@ -30,6 +30,12 @@ parser code {:
 		set;
 	}
 
+  // get the current state of the parser.
+  public int getParserState() 
+  {
+	return ((Symbol)stack.Peek()).parse_state;	
+  }
+
   public override void report_fatal_error(
     string   message, 
     object   info)
@@ -205,7 +211,8 @@ terminal TypeCobol.Compiler.CodeElements.ProcedureStyleCallStatement ProcedureSt
 terminal TypeCobol.Compiler.CodeElements.Program Program;
 
 /* Non terminals */
-non terminal cobolCompilationUnit, cobolProgram, cobolClass, cobolProgramBase, nestedProgram;
+non terminal compilationUnit, cobolCompilationUnit;
+non terminal cobolProgram, cobolClass, cobolProgramBase, nestedProgram;
 non terminal classEndOpt;
 non terminal factoryIdentificationOpt;
 non terminal factoryIdentification;
@@ -253,7 +260,7 @@ non terminal linkageSection;
 non terminal dataDivisionOpt, dataDivision;
 
 non terminal procedureDivision, procedureDivisionOpt;
-non terminal statement, singleStatement, compoundStatement;
+non terminal TypeCobol.Compiler.Nodes.Node statement, singleStatement, compoundStatement;
 non terminal statements;
 non terminal sentence;
 non terminal sentences, sentencesOpt;
@@ -267,6 +274,7 @@ non terminal functionDeclaration;
 non terminal functionProcedureDivision, functionProcedureDivisionOpt;
 non terminal functionOrSectionDeclaration;
 non terminal functionOrSectionDeclarations;
+non terminal configurationSectionHeader;
 
 non terminal onAtEnd, noAtEnd;
 non terminal endConditions;
@@ -354,10 +362,20 @@ non terminal notOnOverflowCondition;
 non terminal onSizeErrorCondition;
 non terminal notOnSizeErrorCondition;
 
+start with compilationUnit;
+
+compilationUnit ::= {: my_parser.Builder.StartCobolCompilationUnit(); :} cobolCompilationUnit:cblCompUnit
+	| {: my_parser.Builder.StartCobolCompilationUnit(); :} /*empty*/
+	;
 
 /* The grammar */
 cobolCompilationUnit ::= cobolProgram:cp
-	| cobolClass:cc
+	{:  :}
+	|  cobolClass:cc
+	{:  :}
+	|  cobolCompilationUnit:ccu cobolProgram:cp
+	{:  :}
+	|  cobolCompilationUnit:ccu cobolClass:cc
 	{:  :}
 	;
 
@@ -378,7 +396,7 @@ cobolProgramBase ::=
 	environmentDivisionOpt:ed
 	dataDivisionOpt:dv
 	procedureDivisionOpt:pdiv
-	{: :}
+	{:  :}
 	;
 
 cobolClass ::= 
@@ -496,7 +514,7 @@ nestedProgram ::=
 	cobolProgramBase:cpb
     nestedProgramOpt:nsp
 	ProgramEnd:pe
-	{: :}
+	{: my_parser.Builder.EndCobolProgram(pe); :}
 	;
 
 nestedProgramOpt ::= /* Empty */
@@ -529,17 +547,20 @@ configurationSectionOpt ::= /*empty*/
 	{:  :}
 	;
 
-configurationSection ::= ConfigurationSectionHeader:csh
-	{:  :}
-	| ConfigurationSectionHeader:csh 
-		{: my_parser.Builder.StartConfigurationSection(csh); :}
+configurationSection ::= configurationSectionHeader 
+	{: my_parser.Builder.EndConfigurationSection(); :}
+	| configurationSectionHeader
 	  configurationParagraphs:cps
-		{: my_parser.Builder.EndConfigurationSection(); :}
+	{: my_parser.Builder.EndConfigurationSection(); :}
+	;
+
+configurationSectionHeader ::= ConfigurationSectionHeader:csh
+	{: my_parser.Builder.StartConfigurationSection(csh); :}
 	;
 
 configurationParagraphs ::= configurationParagraph:cp
 		{:  :}
-	| configurationParagraphs:cps configurationParagraph:cp
+	| configurationParagraphs configurationParagraph:cp
 		{:  :}
 	;
 
@@ -635,6 +656,10 @@ dataDivision ::=
 	localStorageSection:lss
 	linkageSection:ls
 	{: my_parser.Builder.EndDataDivision(); :}
+//|	error FileSectionHeader
+//|	error WorkingStorageSectionHeader
+//|	error LocalStorageSectionHeader
+//|	error LinkageSectionHeader
 	;
 
 fileSection ::= /*empty*/
@@ -642,6 +667,8 @@ fileSection ::= /*empty*/
 	| FileSectionHeader:feh 
 	{: my_parser.Builder.StartFileSection(feh); :}
 	fileDescriptionEntriesOpt:des
+	{: my_parser.Builder.EndFileSection(); :}
+	| error {: my_parser.Builder.EndFileDescriptionEntryIfAny(); :} fileDescriptionEntries
 	{: my_parser.Builder.EndFileSection(); :}
 	;
 
@@ -719,7 +746,7 @@ dataDefinitionEntry ::=
 	| DataRenamesEntry:dre
 	{: my_parser.Builder.StartDataRenamesEntry(dre); :}
 	| DataConditionEntry:dce
-	{: my_parser.Builder.StarDataConditionEntry(dce); :}
+	{: my_parser.Builder.StartDataConditionEntry(dce); :}
 	;
 
 linkageSection ::= /*empty*/
@@ -828,15 +855,13 @@ sections ::= section:s
 	{:  :}
 	;
 
-section ::= sectionHeader:sh 
+section ::= sectionHeader 
 	{: my_parser.Builder.EndSection(); :}
-	| sectionHeader:sh paragraphs:ps
+	| sectionHeader paragraphs
 	{: my_parser.Builder.EndSection(); :}
-	| paragraphHeader:ph 
-	{: my_parser.Builder.EndParagraph(); :}
-	| paragraphHeader:ph paragraphs:ps
-	{: my_parser.Builder.EndParagraph(); :}
-	| sentences:alls
+	| paragraphs
+	{:  :}
+	| sentences
 	{:  :}
 	;
 
@@ -855,15 +880,10 @@ paragraphs ::= paragraph:p
 	;
 
 paragraph ::= 
-	paragraphHeader:ph 
-	sentencesOpt:alls
+	paragraphHeader:ph 	
 	{: my_parser.Builder.EndParagraph(); :}
-	| sentences:alls
-	{:  :}
-	;
-
-sentencesOpt ::= /*empty*/
-	{:  :}
+	| paragraphHeader:ph sentences:alls
+	{: my_parser.Builder.EndParagraph(); :}
 	| sentences:alls
 	{:  :}
 	;
@@ -876,15 +896,15 @@ sentences ::= sentence:s
 
 sentence ::= SentenceEnd:send
 	  {: my_parser.Builder.StartSentence(); my_parser.Builder.EndSentence(send); :}
-    | {: my_parser.Builder.StartSentence(); :} statements:stmts SentenceEnd:send
-	  {: my_parser.Builder.EndSentence(send); :}
+    | statements:stmts SentenceEnd:send
+	  {: my_parser.Builder.EndSentence(send, true); :}
 	//JCM RESOLVE THIS TODO
 	| ExecStatement:stmt
 	{: my_parser.Builder.StartExecStatement(stmt); my_parser.Builder.EndExecStatement(); :}
 	;
 
 statements ::= statement:stmt
-	{:  :}
+	{: my_parser.Builder.CheckStartSentenceLastStatement(); :}
 	| statements:stmts statement:stmt
 	{:  :}
 	;
