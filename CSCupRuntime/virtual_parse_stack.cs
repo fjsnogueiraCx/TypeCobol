@@ -86,8 +86,11 @@ namespace TUVienna.CS_CUP.Runtime
 	/* don't transfer if the real stack is empty */
 	if (real_next >= real_stack.Count) return;
 
-	/* get a copy of the first Symbol we have not transfered */
-	stack_sym = (Symbol)real_stack.ToArray()[real_next];
+    /* get a copy of the first Symbol we have not transfered */
+    //CSCupRuntime: Error Recovery mechanism has a Bug, it does not work.  #926
+    //https://github.com/TypeCobolTeam/TypeCobol/issues/926
+    //stack_sym = (Symbol)real_stack.ToArray()[real_stack.Count-1-real_next]; 
+    stack_sym = (Symbol)real_stack.ToArray()[real_next];
 
 	/* record the transfer */
 	real_next++;
