@@ -120,16 +120,22 @@ using System.Collections;
      * which is missing in C#
      */
 
- public class mStack: Stack
+ public class mStack
     {
-        public mStack(Stack origin):base(origin) {}
+        object[] array;
+        int count;
+        public mStack(Stack origin)
+        {
+            this.array = origin.ToArray();
+            count = origin.Count;
+        }
         public object elementAt(int index)
         {
-            return base.ToArray()[index];
+            return array[count - index - 1];
         }
     }
-   
-public abstract class lr_parser {
+
+    public abstract class lr_parser {
 
 
   /*-----------------------------------------------------------*/
