@@ -146,7 +146,7 @@ namespace TypeCobol.Test {
         [TestMethod]
         [TestCategory("Parsing")]
         [TestProperty("Time", "fast")]
-        [Ignore]//Recovery Error To Test For Cup
+        //[Ignore]//Recovery Error To Test For Cup
         public void CheckParserCobol85()
         {
 			var errors = new System.Collections.Generic.List<Exception>();

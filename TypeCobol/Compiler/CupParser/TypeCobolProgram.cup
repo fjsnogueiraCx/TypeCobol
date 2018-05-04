@@ -30,10 +30,23 @@ parser code {:
 		set;
 	}
 
+	// Test wheither or not this parser is a trial parser
+	public bool IsTrial
+	{
+		get;
+		set;
+	}
+
   // get the current state of the parser.
   public int getParserState() 
   {
 	return ((Symbol)stack.Peek()).parse_state;	
+  }
+
+  //get the parser stack.
+  public Stack getParserStack() 
+  {
+	return stack;	
   }
 
   public override void report_fatal_error(
@@ -83,6 +96,12 @@ parser code {:
 	}
 :};
 
+
+/*	These Special Start Terminal symbols This must be declared first.
+	Ans in the class CodeElementTokenizer the constant NSTARTS must be set to the
+	number (count) of start terminal symbols.
+*/
+terminal StatementEntryPoint;
 
 /* Terminals (tokens returned by the scanner). */
 terminal TypeCobol.Compiler.CodeElements.ProgramIdentification ProgramIdentification;
@@ -211,6 +230,7 @@ terminal TypeCobol.Compiler.CodeElements.ProcedureStyleCallStatement ProcedureSt
 terminal TypeCobol.Compiler.CodeElements.Program Program;
 
 /* Non terminals */
+non terminal starts, statementEntry;
 non terminal compilationUnit, cobolCompilationUnit;
 non terminal cobolProgram, cobolClass, cobolProgramBase, nestedProgram;
 non terminal classEndOpt;
@@ -362,20 +382,24 @@ non terminal notOnOverflowCondition;
 non terminal onSizeErrorCondition;
 non terminal notOnSizeErrorCondition;
 
-start with compilationUnit;
+start with starts;
 
-compilationUnit ::= {: my_parser.Builder.StartCobolCompilationUnit(); :} cobolCompilationUnit:cblCompUnit
+starts ::= compilationUnit		/* rule for starting analyzing a compilation unit */
+	| StatementEntryPoint statementEntry /* rule for starting analyzing a TypeCobol statement */
+	;
+
+compilationUnit ::= {: my_parser.Builder.StartCobolCompilationUnit(); :} cobolCompilationUnit
 	| {: my_parser.Builder.StartCobolCompilationUnit(); :} /*empty*/
 	;
 
 /* The grammar */
-cobolCompilationUnit ::= cobolProgram:cp
+cobolCompilationUnit ::= cobolProgram
 	{:  :}
-	|  cobolClass:cc
+	|  cobolClass
 	{:  :}
-	|  cobolCompilationUnit:ccu cobolProgram:cp
+	|  cobolCompilationUnit cobolProgram
 	{:  :}
-	|  cobolCompilationUnit:ccu cobolClass:cc
+	|  cobolCompilationUnit cobolClass
 	{:  :}
 	;
 
@@ -384,113 +408,113 @@ cobolCompilationUnit ::= cobolProgram:cp
 */
 
 cobolProgram ::=
-	cobolProgramBase:cpb
-    nestedProgramOpt:nsp
+	cobolProgramBase
+    nestedProgramOpt
 	programEndOpt:pe
 	{: my_parser.Builder.EndCobolProgram(pe); :}
 	;
 
 cobolProgramBase ::=
-	programAttributes:pas
+	programAttributes
 	{: my_parser.Builder.StartCobolProgram(programIdentification, libraryCopy); :}
-	environmentDivisionOpt:ed
-	dataDivisionOpt:dv
-	procedureDivisionOpt:pdiv
+	environmentDivisionOpt
+	dataDivisionOpt
+	procedureDivisionOpt
 	{:  :}
 	;
 
 cobolClass ::= 
-	ClassIdentification:ci
-	EnvironmentDivisionHeader:edh
-	factoryIdentificationOpt:fi
-	objectIdentificationOpt:oi
-	classEndOpt:ce
+	ClassIdentification
+	EnvironmentDivisionHeader
+	factoryIdentificationOpt
+	objectIdentificationOpt
+	classEndOpt
 	{: :}
 	;
 
 classEndOpt ::= /*Empty*/
 		{: :}
-	|	ClassEnd:ce
+	|	ClassEnd
 		{: :}
 		;
 
 factoryIdentificationOpt ::= /*empty*/
 		{: :}
-	| factoryIdentification:fi
+	| factoryIdentification
 		{: :}
 	;
 
-factoryIdentification ::= FactoryIdentification:fi factoryDataDivisionOpt:fdd factoryObjectprocedureDivisionOpt:pdd factoryEndOpt:fe
+factoryIdentification ::= FactoryIdentification factoryDataDivisionOpt factoryObjectprocedureDivisionOpt factoryEndOpt
 		{: :}
 	;
 
 factoryEndOpt ::= /*empty*/
 	{: :}
-	| FactoryEnd:fe
+	| FactoryEnd
 	{: :}
 	;
 		
 factoryDataDivisionOpt ::= /*empty*/
 		{: :}
-	|	factoryDataDivision:fdd
+	|	factoryDataDivision
 		{: :}
 	;	
 
-factoryDataDivision ::= DataDivisionHeader:ddh workingStorageSection:ws factoryObjectprocedureDivisionOpt:pdd
+factoryDataDivision ::= DataDivisionHeader workingStorageSection factoryObjectprocedureDivisionOpt
 		{: :}
 	;	
 
 factoryObjectprocedureDivisionOpt ::= /*empty*/
 		{: :}
-	|	factoryObjectprocedureDivision:pdd
+	|	factoryObjectprocedureDivision
 		{: :}
 	;	
 
-factoryObjectprocedureDivision ::= ProcedureDivisionHeader:pdh methodDefitionsOpt:mdefs
+factoryObjectprocedureDivision ::= ProcedureDivisionHeader methodDefitionsOpt
 		{: :}
 	;	
 
 objectIdentificationOpt ::= /*empty*/
 		{: :}
-	|	objectIdentification:oi
+	|	objectIdentification
 		{: :}
 	;	
 
-objectIdentification ::= ObjectIdentification:oi workingStorageSection:ws factoryObjectprocedureDivisionOpt:pdd objectEndOpt:oe
+objectIdentification ::= ObjectIdentification workingStorageSection factoryObjectprocedureDivisionOpt objectEndOpt
 		{: :}
 	;	
 
 objectEndOpt ::= /* empty */
 		{: :}
-	| ObjectEnd:oe
+	| ObjectEnd
 		{: :}
 	;
 
 methodDefitionsOpt ::= /* empty */
 		{: :}
-	|	methodDefitions:mdefs
+	|	methodDefitions
 		{: :}
 	;	
 
-methodDefitions ::= methodDefition:md
+methodDefitions ::= methodDefition
 		{: :}
-	| methodDefitions:mdefs methodDefition:md
+	| methodDefitions methodDefition
 		{: :}
 	;
 
-methodDefition ::= MethodIdentification:mi methodEnvironmentDivisionOpt:med dataDivisionOpt:dv procedureDivisionOpt:pdiv MethodEnd:me
+methodDefition ::= MethodIdentification methodEnvironmentDivisionOpt dataDivisionOpt procedureDivisionOpt MethodEnd
 	{: :}
 	;
 
 methodEnvironmentDivisionOpt ::= /*empty*/
 	{:  :}
-	| methodEnvironmentDivision:ed
+	| methodEnvironmentDivision
 	{:  :}
 	;
 
 methodEnvironmentDivision ::=
-	EnvironmentDivisionHeader:edh  
-	inputOutputSectionOpt:ioc
+	EnvironmentDivisionHeader
+	inputOutputSectionOpt
 	{:  :}
 	;
 
@@ -511,15 +535,15 @@ programEndOpt ::= /* empty */
 	;
 
 nestedProgram ::= 	
-	cobolProgramBase:cpb
-    nestedProgramOpt:nsp
+	cobolProgramBase
+    nestedProgramOpt
 	ProgramEnd:pe
 	{: my_parser.Builder.EndCobolProgram(pe); :}
 	;
 
 nestedProgramOpt ::= /* Empty */
 	{:  :}
-	| nestedProgramOpt:nsp nestedProgram:np
+	| nestedProgramOpt nestedProgram
 	{:  :}
 	;
 
@@ -529,28 +553,28 @@ nestedProgramOpt ::= /* Empty */
 
 environmentDivisionOpt ::= /*empty*/
 	{:  :}
-	| environmentDivision:ed
+	| environmentDivision
 	{:  :}
 	;
 
 environmentDivision ::=
 	EnvironmentDivisionHeader:edh  
 	{: my_parser.Builder.StartEnvironmentDivision(edh); :}
-	configurationSectionOpt:cs
-	inputOutputSectionOpt:ioc
+	configurationSectionOpt
+	inputOutputSectionOpt
 	{: my_parser.Builder.EndEnvironmentDivision(); :}
 	;
 
 configurationSectionOpt ::= /*empty*/
 	{:  :}
-	| configurationSection:cs
+	| configurationSection
 	{:  :}
 	;
 
 configurationSection ::= configurationSectionHeader 
 	{: my_parser.Builder.EndConfigurationSection(); :}
 	| configurationSectionHeader
-	  configurationParagraphs:cps
+	  configurationParagraphs
 	{: my_parser.Builder.EndConfigurationSection(); :}
 	;
 
@@ -558,9 +582,9 @@ configurationSectionHeader ::= ConfigurationSectionHeader:csh
 	{: my_parser.Builder.StartConfigurationSection(csh); :}
 	;
 
-configurationParagraphs ::= configurationParagraph:cp
+configurationParagraphs ::= configurationParagraph
 		{:  :}
-	| configurationParagraphs configurationParagraph:cp
+	| configurationParagraphs configurationParagraph
 		{:  :}
 	;
 
@@ -577,34 +601,34 @@ configurationParagraph ::=
 
 inputOutputSectionOpt ::= /*empty*/
 	{:  :}
-	| inputOutputSection:ios
+	| inputOutputSection
 	{:  :}
 	;
 
 inputOutputSection ::= 
 	InputOutputSectionHeader:iosh
 	{: my_parser.Builder.StartInputOutputSection(iosh); :}
-	fileControlParagraphOpt:fcp
-	ioControlParagraphOpt:iocp
+	fileControlParagraphOpt
+	ioControlParagraphOpt
 	{: my_parser.Builder.EndInputOutputSection(); :}
 	;
 
 fileControlParagraphOpt ::= /*empty*/
 	{:  :}
-	| fileControlParagraph:fcp
+	| fileControlParagraph
 	{:  :}
 	;
 
 fileControlParagraph ::=
 	FileControlParagraphHeader:fcph
 	{: my_parser.Builder.StartFileControlParagraph(fcph); :}
-	fileControlEntriesOpt:fces
+	fileControlEntriesOpt
 	{: my_parser.Builder.EndFileControlParagraph(); :}
 	;
 
 fileControlEntriesOpt ::= /*empty*/
 		{:  :}
-	| fileControlEntries:fces
+	| fileControlEntries
 		{:  :}
 	;
 
@@ -616,25 +640,25 @@ fileControlEntries ::= FileControlEntry:fce
 
 ioControlParagraphOpt ::= /*empty*/
 		{:  :}
-	| ioControlParagraph:iocp
+	| ioControlParagraph
 		{:  :}
 	;
 
 ioControlParagraph ::= 
-	IOControlParagraphHeader:iocph
-	ioControlSentencesOpt:iocs
+	IOControlParagraphHeader
+	ioControlSentencesOpt
 	{:  :}
 	;
 
 ioControlSentencesOpt ::= /* empty */	
 		{:  :}
-	| ioControlEntries:ioces SentenceEnd:se
+	| ioControlEntries SentenceEnd
 		{:	:}
 	;
 
-ioControlEntries ::= IOControlEntry:ioce
+ioControlEntries ::= IOControlEntry
 		{:  :}
-	| ioControlEntries:ioces IOControlEntry:ioce
+	| ioControlEntries IOControlEntry
 		{:  :}
 	;
 
@@ -644,17 +668,17 @@ ioControlEntries ::= IOControlEntry:ioce
 */
 dataDivisionOpt ::= /*empty*/
 	{:  :}
-	| dataDivision:dv
+	| dataDivision
 	{:  :}
 	;
 
 dataDivision ::=
 	DataDivisionHeader:ddh
 	{: my_parser.Builder.StartDataDivision(ddh); :}
-	fileSection:fs
-	workingStorageSection :wss
-	localStorageSection:lss
-	linkageSection:ls
+	fileSection
+	workingStorageSection
+	localStorageSection
+	linkageSection
 	{: my_parser.Builder.EndDataDivision(); :}
 //|	error FileSectionHeader
 //|	error WorkingStorageSectionHeader
@@ -666,55 +690,55 @@ fileSection ::= /*empty*/
 	{:  :}
 	| FileSectionHeader:feh 
 	{: my_parser.Builder.StartFileSection(feh); :}
-	fileDescriptionEntriesOpt:des
+	fileDescriptionEntriesOpt
 	{: my_parser.Builder.EndFileSection(); :}
-	| error {: my_parser.Builder.EndFileDescriptionEntryIfAny(); :} fileDescriptionEntries
+	| error fileDescriptionEntries
 	{: my_parser.Builder.EndFileSection(); :}
 	;
 
 fileDescriptionEntriesOpt ::= /*empty*/
 	{:  :}
-	| fileDescriptionEntries:fdes
+	| fileDescriptionEntries
 	{:  :}
 	;
 
 fileDescriptionEntries ::=
-	fileDescriptionEntry:fde
+	fileDescriptionEntry
 	{:  :}
-	| fileDescriptionEntries:fdes fileDescriptionEntry:fde
+	| fileDescriptionEntries fileDescriptionEntry
 	{:  :}
 	;
 
 fileDescriptionEntry ::= 
 	FileDescriptionEntry:fde 
-	{: my_parser.Builder.StartFileDescriptionEntry(fde); :}
-	dataDefinitionEntries:dfes
-	{: my_parser.Builder.EndFileDescriptionEntry(); :}
+	{: my_parser.Builder.StartFileDescriptionEntry(fde); my_parser.Builder.EndFileDescriptionEntry(); :}
+	dataDefinitionEntries
+	{:  :}
 	;
 
 workingStorageSection ::= /*empty*/
 	{:  :}
 	| WorkingStorageSectionHeader:wssh 
 	{: my_parser.Builder.StartWorkingStorageSection(wssh); :}
-	  storageEntries:ses
+	  storageEntries
 	{: my_parser.Builder.EndWorkingStorageSection(); :}
 	;
 
 storageEntries ::= /*empty*/
 	{:  :}
-	| storageEntries:ses storageEntry:se
+	| storageEntries storageEntry
 	{:  :}
 	;
 
-storageEntry ::= dataDefinitionEntry:dde
+storageEntry ::= dataDefinitionEntry
 	{:  :}
-	| execSqlStatement:ess
+	| execSqlStatement
 	{:  :}
 	;
 
-execSqlStatement ::= ExecStatement:es
+execSqlStatement ::= ExecStatement
 	{:  :}
-	| ExecStatement:es SentenceEnd:se
+	| ExecStatement SentenceEnd
 	{:  :}
 	;
 
@@ -722,19 +746,19 @@ localStorageSection ::= /*empty*/
 	{:  :}
 	| LocalStorageSectionHeader:lsh 
 	{: my_parser.Builder.StartLocalStorageSection(lsh); :}
-	storageEntries:ses	
+	storageEntries
 	{: my_parser.Builder.EndLocalStorageSection(); :}
 	;
 
 dataDefinitionEntriesOpt ::= /*empty*/
 	{:  :}
-	| dataDefinitionEntries:ddes
+	| dataDefinitionEntries
 	{:  :}
 	;
 
-dataDefinitionEntries ::= dataDefinitionEntry:dde
+dataDefinitionEntries ::= dataDefinitionEntry
 	{:  :}
-	| dataDefinitionEntries:ddes dataDefinitionEntry:dde
+	| dataDefinitionEntries dataDefinitionEntry
 	{:  :}
 	;
 
@@ -753,21 +777,21 @@ linkageSection ::= /*empty*/
 	{:  :}
 	| LinkageSectionHeader:lsh 
 	{: my_parser.Builder.StartLinkageSection(lsh); :}
-	dataDefinitionEntriesOpt:ddes
+	dataDefinitionEntriesOpt
 	{: my_parser.Builder.EndLinkageSection(); :}
 	;
 
 procedureDivisionOpt ::= /*empty*/
 	{:  :}
-	| procedureDivision:pdiv
+	| procedureDivision
 	{:  :}
 	;
 
 // TCRFUN_DECLARATION_AS_NESTED_PROGRAM
 procedureDivision ::=
-	procedureDivisionHeader:pdh 	
-	declarativesOpt:decls
-	functionOrSectionDeclarations:elems
+	procedureDivisionHeader
+	declarativesOpt
+	functionOrSectionDeclarations
 	{: my_parser.Builder.EndProcedureDivision(); :}
 	;
 
@@ -777,13 +801,13 @@ procedureDivisionHeader ::= ProcedureDivisionHeader:pdh
 
 functionOrSectionDeclarations ::= /*empty*/
 	{:  :}
-	| functionOrSectionDeclarations:elems functionOrSectionDeclaration:elem
+	| functionOrSectionDeclarations functionOrSectionDeclaration
 	{:  :}
 	;
 
-functionOrSectionDeclaration ::= functionDeclaration:fd
+functionOrSectionDeclaration ::= functionDeclaration
 	{:  :}
-	| section:s
+	| section
 	{:  :}
 	;
 
@@ -794,24 +818,24 @@ functionOrSectionDeclaration ::= functionDeclaration:fd
 functionDeclaration ::=
 	FunctionDeclarationHeader:fdh
 	{: my_parser.Builder.StartFunctionDeclaration(fdh); :}
-	dataDivisionOpt:dv
-	functionProcedureDivisionOpt:fpd
+	dataDivisionOpt
+	functionProcedureDivisionOpt
 	FunctionDeclarationEnd:fe
 	{: my_parser.Builder.EndFunctionDeclaration(fe); :}
 	;
 
 functionProcedureDivisionOpt ::= /*empty*/
 	{:  :}
-	| functionProcedureDivision:fpd
+	| functionProcedureDivision
 	{:  :}
 	;
 
 // TCRFUN_DECLARATION_NO_DECLARATIVES
 functionProcedureDivision ::=
-	functionProcedureDivisionHeader:pdh 
+	functionProcedureDivisionHeader 
 	{: my_parser.Builder.EndFunctionProcedureDivision(); :}
-| 	functionProcedureDivisionHeader:pdh 
-	sections:alls
+| 	functionProcedureDivisionHeader
+	sections
 	{: my_parser.Builder.EndFunctionProcedureDivision(); :}
 	;
 
@@ -821,37 +845,37 @@ functionProcedureDivisionHeader ::= ProcedureDivisionHeader:pdh
 
 declarativesOpt ::= /*empty*/
 	{:  :}
-	| declaratives:decls
+	| declaratives
 	{:  :}
 	;
 
 declaratives ::=
 	DeclarativesHeader:dh
 	{: my_parser.Builder.StartDeclaratives(dh); :}
-	declarativesSections:decls
+	declarativesSections
 	DeclarativesEnd:de
 	{: my_parser.Builder.EndDeclaratives(de); :}
 	;
 
 
-declarativesSections ::= declarativesSection:ds
+declarativesSections ::= declarativesSection
 	{:  :}
-	| declarativesSections:decls declarativesSection:ds
+	| declarativesSections declarativesSection
 	{:  :}
 	;
 
 declarativesSection ::= 
-	SectionHeader:sh 
-	UseStatement:us
+	SectionHeader 
+	UseStatement
 	{:  :}
-	| SectionHeader:sh 
-	UseStatement:us paragraphs:p
+	| SectionHeader
+	UseStatement paragraphs
 	{:  :}	
 	;
 
-sections ::= section:s
+sections ::= section
 	{:  :}
-	| sections:alls section:s
+	| sections section
 	{:  :}
 	;
 
@@ -873,48 +897,58 @@ paragraphHeader ::= ParagraphHeader:ph
 	{: my_parser.Builder.StartParagraph(ph); :}
 	;
 
-paragraphs ::= paragraph:p
+paragraphs ::= paragraph
 	{:  :}
-	| paragraphs:ps paragraph:p
+	| paragraphs paragraph
 	{:  :}
 	;
 
 paragraph ::= 
-	paragraphHeader:ph 	
+	paragraphHeader	
 	{: my_parser.Builder.EndParagraph(); :}
-	| paragraphHeader:ph sentences:alls
+	| paragraphHeader sentences
 	{: my_parser.Builder.EndParagraph(); :}
-	| sentences:alls
+	| sentences
 	{:  :}
 	;
 
-sentences ::= sentence:s
+sentences ::= sentence
 	{:  :}
-	| sentences:alls sentence:s
-	{:  :}
+	| sentences sentence
 	;
 
 sentence ::= SentenceEnd:send
 	  {: my_parser.Builder.StartSentence(); my_parser.Builder.EndSentence(send); :}
-    | statements:stmts SentenceEnd:send
+    | statements SentenceEnd:send
 	  {: my_parser.Builder.EndSentence(send, true); :}
 	//JCM RESOLVE THIS TODO
 	| ExecStatement:stmt
 	{: my_parser.Builder.StartExecStatement(stmt); my_parser.Builder.EndExecStatement(); :}
+	| error SentenceEnd:send
+	{: my_parser.Builder.EndSentence(send, true); :}
+	| error statements SentenceEnd:send
+	{: my_parser.Builder.EndSentence(send, true); :}
 	;
 
-statements ::= statement:stmt
+statementEntry ::= statement
+	| StatementEntryPoint ifstatement
+	{: my_parser.Builder.EndIfStatementWithBody(); :}
+	| StatementEntryPoint searchStatement
+	{: my_parser.Builder.EndSearchStatementWithBody(); :}
+	;
+
+statements ::= statement
 	{: my_parser.Builder.CheckStartSentenceLastStatement(); :}
-	| statements:stmts statement:stmt
+	| statements statement
 	{:  :}
+	| statements statement 	
+	{: :}
 	;
 
-statement ::= singleStatement:stmt
+statement ::= singleStatement
 	{:  :}
-	| compoundStatement:stmt
+	| compoundStatement
 	{:  :}
-	| error statement /* ERROR Recovery on Statement ==> go to the next statement */
-	{: :}
 	;
 
 singleStatement ::=
@@ -980,47 +1014,47 @@ singleStatement ::=
 	;
 	
 // Statements with optional body  
-compoundStatement ::= addStatementConditional:stmt
+compoundStatement ::= addStatementConditional
 		{:  :}
-	|	callStatementConditional:stmt
+	|	callStatementConditional
 		{:  :}
-	|	computeStatementConditional:stmt
+	|	computeStatementConditional
 		{:  :}
-	|	deleteStatementConditional:stmt
+	|	deleteStatementConditional
 		{:  :}
-	|	evaluateStatementWithBody:stmt
+	|	evaluateStatementWithBody
 		{:  :}
-	|	ifStatementWithBody:stmt
+	|	ifStatementWithBody
 		{:  :}
-	|	invokeStatementConditional:stmt
+	|	invokeStatementConditional
 		{:  :}
-	|	divideStatementConditional:stmt
+	|	divideStatementConditional
 		{:  :}
-	|	multiplyStatementConditional:stmt
+	|	multiplyStatementConditional
 		{:  :}
-	|	performStatementWithBody:stmt
+	|	performStatementWithBody
 		{:  :}
-	|	readStatementConditional:stmt
+	|	readStatementConditional
 		{:  :}
-	|	returnStatementConditional:stmt
+	|	returnStatementConditional
 		{:  :}
-	|	rewriteStatementConditional:stmt
+	|	rewriteStatementConditional
 		{:  :}
-	|	searchStatementWithBody:stmt
+	|	searchStatementWithBody
 		{:  :}
-	|	startStatementConditional:stmt
+	|	startStatementConditional
 		{:  :}
-	|	stringStatementConditional:stmt
+	|	stringStatementConditional
 		{:  :}
-	|	subtractStatementConditional:stmt
+	|	subtractStatementConditional
 		{:  :}
-	|	unstringStatementConditional:stmt
+	|	unstringStatementConditional
 		{:  :}
-	|	writeStatementConditional:stmt
+	|	writeStatementConditional
 		{:  :}
-	|	xmlGenerateStatementConditional:stmt
+	|	xmlGenerateStatementConditional
 		{:  :}
-	|	xmlParseStatementConditional:stmt
+	|	xmlParseStatementConditional
 		{:  :}
 	;
 
@@ -1029,9 +1063,9 @@ addStatementConditional ::=
 		{: my_parser.Builder.EndAddStatementConditional(); :}
 	|	addStatement AddStatementEnd:end
 		{: my_parser.Builder.EndAddStatementConditional(end); :}
-	|	addStatement sizeErrorConditions:conds
+	|	addStatement sizeErrorConditions
 		{:  my_parser.Builder.EndAddStatementConditional(); :}
-	|	addStatement sizeErrorConditions:conds AddStatementEnd:end
+	|	addStatement sizeErrorConditions AddStatementEnd:end
 		{:  my_parser.Builder.EndAddStatementConditional(end); :}
 	;
 
@@ -1044,9 +1078,9 @@ callStatementConditional ::=
 		{: my_parser.Builder.EndCallStatementConditional(); :}
 	|	callStatement CallStatementEnd:end
 		{: my_parser.Builder.EndCallStatementConditional(end); :}
-	|	callStatement callStatementConditions:conds
+	|	callStatement callStatementConditions
 		{: my_parser.Builder.EndCallStatementConditional(); :}
-	|	callStatement callStatementConditions:conds CallStatementEnd:end
+	|	callStatement callStatementConditions CallStatementEnd:end
 		{:  my_parser.Builder.EndCallStatementConditional(end); :}
 	;
 
@@ -1055,11 +1089,11 @@ callStatement ::= CallStatement:stmt
 	;
 
 callStatementConditions ::=
-	  onException:on
+	  onException
 	{:  :}
-	| noException:not_on
+	| noException
 	{:  :}
-	| onOverflow:on
+	| onOverflow
 	{:  :}
 	;
 
@@ -1068,9 +1102,9 @@ computeStatementConditional ::=
 		{: my_parser.Builder.EndComputeStatementConditional(); :}
 	|	computeStatement ComputeStatementEnd:end
 		{: my_parser.Builder.EndComputeStatementConditional(end); :}
-	|	computeStatement sizeErrorConditions:conds
+	|	computeStatement sizeErrorConditions
 		{: my_parser.Builder.EndComputeStatementConditional(); :}
-	|	computeStatement sizeErrorConditions:conds ComputeStatementEnd:end
+	|	computeStatement sizeErrorConditions ComputeStatementEnd:end
 		{: my_parser.Builder.EndComputeStatementConditional(end); :}
 	;
 
@@ -1083,9 +1117,9 @@ deleteStatementConditional ::=
 		{: my_parser.Builder.EndDeleteStatementConditional(); :}
 	|	deleteStatement DeleteStatementEnd:end
 		{: my_parser.Builder.EndDeleteStatementConditional(end); :}
-	|	deleteStatement keyConditions:conds
+	|	deleteStatement keyConditions
 		{: my_parser.Builder.EndDeleteStatementConditional(); :}
-	|	deleteStatement keyConditions:conds DeleteStatementEnd:end
+	|	deleteStatement keyConditions DeleteStatementEnd:end
 		{: my_parser.Builder.EndDeleteStatementConditional(end); :}
 	;
 
@@ -1099,9 +1133,9 @@ divideStatementConditional ::=
 		{: my_parser.Builder.EndDivideStatementConditional(); :}
 	|	divideStatement DivideStatementEnd:end
 		{: my_parser.Builder.EndDivideStatementConditional(end); :}
-	|	divideStatement sizeErrorConditions:conds
+	|	divideStatement sizeErrorConditions
 		{: my_parser.Builder.EndDivideStatementConditional(); :}
-	|	divideStatement sizeErrorConditions:conds DivideStatementEnd:end
+	|	divideStatement sizeErrorConditions DivideStatementEnd:end
 		{: my_parser.Builder.EndDivideStatementConditional(end); :}
 	;
 
@@ -1114,18 +1148,25 @@ evaluateStatementWithBody ::=
 		{: my_parser.Builder.EndEvaluateStatementWithBody(); :}
 	|	evaluateStatement EvaluateStatementEnd:ese
 		{: my_parser.Builder.EndEvaluateStatementWithBody(ese); :}
-	|	evaluateStatement whenConditionClauses:wccs
+	|	evaluateStatement whenConditionClauses
 		{: my_parser.Builder.EndEvaluateStatementWithBody(); :}
-	|	evaluateStatement whenConditionClauses:wccs  EvaluateStatementEnd:ese
+	|	evaluateStatement whenConditionClauses  EvaluateStatementEnd:ese
 		{: my_parser.Builder.EndEvaluateStatementWithBody(ese); :}
-	|	evaluateStatement whenOtherClause:woc
+	|	evaluateStatement whenOtherClause
 		{: my_parser.Builder.EndEvaluateStatementWithBody(); :}
-	|	evaluateStatement whenOtherClause:woc EvaluateStatementEnd:ese
+	|	evaluateStatement whenOtherClause EvaluateStatementEnd:ese
 		{: my_parser.Builder.EndEvaluateStatementWithBody(ese); :}
-	|	evaluateStatement whenConditionClauses:wccs whenOtherClause:woc
+	|	evaluateStatement whenConditionClauses whenOtherClause
 		{: my_parser.Builder.EndEvaluateStatementWithBody(); :}
-	|	evaluateStatement whenConditionClauses:wccs whenOtherClause:woc EvaluateStatementEnd:ese
+	|	evaluateStatement whenConditionClauses whenOtherClause EvaluateStatementEnd:ese
 		{: my_parser.Builder.EndEvaluateStatementWithBody(ese); :}
+
+	|	evaluateStatement whenConditionClauses error EvaluateStatementEnd:ese
+		{: my_parser.Builder.EndEvaluateStatementWithBody(); :}
+	|	evaluateStatement whenConditionClauses error whenOtherClause
+		{: my_parser.Builder.EndEvaluateStatementWithBody(); :}
+	|	evaluateStatement whenConditionClauses error whenOtherClause EvaluateStatementEnd:ese
+		{: my_parser.Builder.EndEvaluateStatementWithBody(); :}
 	;
 
 evaluateStatement ::= EvaluateStatement:est
@@ -1133,13 +1174,15 @@ evaluateStatement ::= EvaluateStatement:est
 	;
 
 whenConditionClauses ::= 
-		whenConditionClause:wcc
+		whenConditionClause
 		{:  :}
-	|	whenConditionClauses:wccs whenConditionClause:wcc
+	|	whenConditionClauses whenConditionClause
 		{:  :}
+	|	error whenConditionClause
+	|	whenConditionClauses error whenConditionClause
 	;
 
-whenConditionClause ::= whenEvaluateConditionsStart:wecs  statements:stmts
+whenConditionClause ::= whenEvaluateConditionsStart  statements
 	{: my_parser.Builder.EndWhenConditionClause(); :}
 	;
 
@@ -1160,7 +1203,7 @@ whenEvaluateConditionsStart ::= whenEvaluateConditions:wecs
 	;
 
 
-whenOtherClause ::= whenOtherCondition:woc statements:stmts
+whenOtherClause ::= whenOtherCondition:woc statements
 	{: my_parser.Builder.EndWhenOtherClause(); :}
 	;
 
@@ -1169,34 +1212,34 @@ whenOtherCondition ::= WhenOtherCondition:woc
 	;
 
 ifStatementWithBody ::=
-	ifstatement:ifs statements:thenStmts
+	ifstatement statements
 	{: my_parser.Builder.EndIfStatementWithBody(); :}
-	| ifstatement:ifs statements:thenStmts IfStatementEnd:end
+	| ifstatement statements IfStatementEnd:end
 	{: my_parser.Builder.EndIfStatementWithBody(end); :}
 
-	| ifstatement:ifs nextSentenceStatement:ness
+	| ifstatement nextSentenceStatement
 	{:  my_parser.Builder.EndIfStatementWithBody(); :}
-	| ifstatement:ifs nextSentenceStatement:ness IfStatementEnd:end
+	| ifstatement nextSentenceStatement IfStatementEnd:end
 	{: my_parser.Builder.EndIfStatementWithBody(end); :}
 
-	| ifstatement:ifs statements:thenStmts elseCondition:ec statements:elseStmts
+	| ifstatement statements elseCondition statements
 	{: my_parser.Builder.EndIfStatementWithBody(); :}
-	| ifstatement:ifs statements:thenStmts elseCondition:ec nextSentenceStatement:ness
-	{: my_parser.Builder.EndIfStatementWithBody(); :}
-
-	| ifstatement:ifs statements:thenStmts elseCondition:ec statements:elseStmts IfStatementEnd:end
-	{: my_parser.Builder.EndIfStatementWithBody(end); :}
-	| ifstatement:ifs statements:thenStmts elseCondition:ec nextSentenceStatement:ness IfStatementEnd:end
-	{: my_parser.Builder.EndIfStatementWithBody(end); :}
-
-	| ifstatement:ifs nextSentenceStatement:ness elseCondition:ec statements:elseStmts
-	{: my_parser.Builder.EndIfStatementWithBody(); :}
-	| ifstatement:ifs nextSentenceStatement:nessThen elseCondition:ec nextSentenceStatement:nessElse
+	| ifstatement statements elseCondition nextSentenceStatement
 	{: my_parser.Builder.EndIfStatementWithBody(); :}
 
-	| ifstatement:ifs nextSentenceStatement:ness elseCondition:ec statements:elseStmts IfStatementEnd:end
+	| ifstatement statements elseCondition statements IfStatementEnd:end
 	{: my_parser.Builder.EndIfStatementWithBody(end); :}
-	| ifstatement:ifs nextSentenceStatement:nessThen elseCondition:ec nextSentenceStatement:nessElse IfStatementEnd:end
+	| ifstatement statements elseCondition nextSentenceStatement IfStatementEnd:end
+	{: my_parser.Builder.EndIfStatementWithBody(end); :}
+
+	| ifstatement nextSentenceStatement elseCondition statements
+	{: my_parser.Builder.EndIfStatementWithBody(); :}
+	| ifstatement nextSentenceStatement elseCondition nextSentenceStatement
+	{: my_parser.Builder.EndIfStatementWithBody(); :}
+
+	| ifstatement nextSentenceStatement elseCondition statements IfStatementEnd:end
+	{: my_parser.Builder.EndIfStatementWithBody(end); :}
+	| ifstatement nextSentenceStatement elseCondition nextSentenceStatement IfStatementEnd:end
 	{: my_parser.Builder.EndIfStatementWithBody(end); :}
 	;
 
@@ -1213,13 +1256,13 @@ nextSentenceStatement ::= NextSentenceStatement:next
 	;
 
 invokeStatementConditional ::=
-		invokeStatement:stmt
+		invokeStatement
 		{: my_parser.Builder.EndInvokeStatementConditional(); :}
-	|	invokeStatement:stmt InvokeStatementEnd:end
+	|	invokeStatement InvokeStatementEnd:end
 		{: my_parser.Builder.EndInvokeStatementConditional(end); :}
-	|	invokeStatement:stmt exceptionConditions:conds
+	|	invokeStatement exceptionConditions
 		{: my_parser.Builder.EndInvokeStatementConditional(); :}
-	|	invokeStatement:stmt exceptionConditions:conds InvokeStatementEnd:end
+	|	invokeStatement exceptionConditions InvokeStatementEnd:end
 		{: my_parser.Builder.EndInvokeStatementConditional(end); :}
 	;
 
@@ -1228,13 +1271,13 @@ invokeStatement ::= InvokeStatement:stmt
 	;
 
 multiplyStatementConditional ::=
-		multiplyStatement:stmt
+		multiplyStatement
 		{: my_parser.Builder.EndMultiplyStatementConditional(); :}
-	|	multiplyStatement:stmt MultiplyStatementEnd:end
+	|	multiplyStatement MultiplyStatementEnd:end
 		{: my_parser.Builder.EndMultiplyStatementConditional(end); :}
-	|	multiplyStatement:stmt sizeErrorConditions:conds
+	|	multiplyStatement sizeErrorConditions
 		{: my_parser.Builder.EndMultiplyStatementConditional(); :}
-	|	multiplyStatement:stmt sizeErrorConditions:conds MultiplyStatementEnd:end
+	|	multiplyStatement sizeErrorConditions MultiplyStatementEnd:end
 		{: my_parser.Builder.EndMultiplyStatementConditional(end); :}
 	;
 
@@ -1243,13 +1286,13 @@ multiplyStatement ::= MultiplyStatement:stmt
 	;
 
 performStatementWithBody ::=			
-		performStatement:stmt
+		performStatement
 		{: my_parser.Builder.EndPerformStatementWithBody(); :}
-	|	performStatement:stmt PerformStatementEnd:end
+	|	performStatement PerformStatementEnd:end
 		{: my_parser.Builder.EndPerformStatementWithBody(end); :}
-	|	performStatement:stmt statements:stmts
+	|	performStatement statements
 		{: my_parser.Builder.EndPerformStatementWithBody(); :}
-	|	performStatement:stmt statements:stmts PerformStatementEnd:end
+	|	performStatement statements PerformStatementEnd:end
 		{: my_parser.Builder.EndPerformStatementWithBody(end); :}
 	;
 
@@ -1258,13 +1301,13 @@ performStatement ::= PerformStatement:stmt
 	;
 
 readStatementConditional ::=
-		readStatement:stmt
+		readStatement
 		{: my_parser.Builder.EndReadStatementConditional(); :}
-	|	readStatement:stmt ReadStatementEnd:end
+	|	readStatement ReadStatementEnd:end
 		{: my_parser.Builder.EndReadStatementConditional(end); :}
-	|	readStatement:stmt rwStatementConditions:conds
+	|	readStatement rwStatementConditions
 		{: my_parser.Builder.EndReadStatementConditional(); :}
-	|	readStatement:stmt rwStatementConditions:conds ReadStatementEnd:end
+	|	readStatement rwStatementConditions ReadStatementEnd:end
 		{: my_parser.Builder.EndReadStatementConditional(end); :}
 	;
 
@@ -1273,31 +1316,31 @@ readStatement ::= ReadStatement:stmt
 	;
 
 rwStatementCondition ::=
-	  onAtEnd:at
+	  onAtEnd
 	{:  :}
-	| noAtEnd:not_at
+	| noAtEnd
 	{:  :}
-	| onInvalidKey:on
+	| onInvalidKey
 	{:  :}
-	| noInvalidKey:not_on
+	| noInvalidKey
 	{:  :}
 	;
 
 rwStatementConditions ::=
-		rwStatementCondition:rwsc
+		rwStatementCondition
 		{:  :}
-	|	rwStatementConditions:rwscs rwStatementCondition:rwsc
+	|	rwStatementConditions rwStatementCondition
 		{:  :}
 	;
 
 returnStatementConditional ::=
-		returnStatement:stmt
+		returnStatement
 		{: my_parser.Builder.EndReturnStatementConditional(); :}
-	|	returnStatement:stmt ReturnStatementEnd:end
+	|	returnStatement ReturnStatementEnd:end
 		{: my_parser.Builder.EndReturnStatementConditional(end); :}
-	|	returnStatement:stmt endConditions:conds
+	|	returnStatement endConditions
 		{: my_parser.Builder.EndReturnStatementConditional(); :}
-	|	returnStatement:stmt endConditions:conds ReturnStatementEnd:end
+	|	returnStatement endConditions ReturnStatementEnd:end
 		{: my_parser.Builder.EndReturnStatementConditional(end); :}
 	;
 
@@ -1306,13 +1349,13 @@ returnStatement ::= ReturnStatement:stmt
 	;
 
 rewriteStatementConditional ::=
-		rewriteStatement:stmt
+		rewriteStatement
 		{: my_parser.Builder.EndRewriteStatementConditional(); :}
-	|	rewriteStatement:stmt RewriteStatementEnd:end
+	|	rewriteStatement RewriteStatementEnd:end
 		{: my_parser.Builder.EndRewriteStatementConditional(end); :}
-	|	rewriteStatement:stmt keyConditions:conds
+	|	rewriteStatement keyConditions
 		{: my_parser.Builder.EndRewriteStatementConditional(); :}
-	|	rewriteStatement:stmt keyConditions:conds RewriteStatementEnd:end
+	|	rewriteStatement keyConditions RewriteStatementEnd:end
 		{: my_parser.Builder.EndRewriteStatementConditional(end); :}
 	;
 
@@ -1321,13 +1364,13 @@ rewriteStatement ::= RewriteStatement:stmt
 	;
 
 searchStatementWithBody ::=
-		searchStatement:stmt whenSearchConditionClauses:wsccs
+		searchStatement whenSearchConditionClauses
 		{: my_parser.Builder.EndSearchStatementWithBody(); :}
-	|	searchStatement:stmt whenSearchConditionClauses:wsccs SearchStatementEnd:end
+	|	searchStatement whenSearchConditionClauses SearchStatementEnd:end
 		{: my_parser.Builder.EndSearchStatementWithBody(end); :}
-	|	searchStatement:stmt onAtEnd:cend whenSearchConditionClauses:wsccs
+	|	searchStatement onAtEnd whenSearchConditionClauses:wsccs
 		{: my_parser.Builder.EndSearchStatementWithBody(); :}
-	|	searchStatement:stmt onAtEnd:cend whenSearchConditionClauses:wsccs SearchStatementEnd:end
+	|	searchStatement onAtEnd whenSearchConditionClauses SearchStatementEnd:end
 		{: my_parser.Builder.EndSearchStatementWithBody(end); :}
 	;
 
@@ -1336,9 +1379,9 @@ searchStatement ::= SearchStatement:stmt
 	;
 
 whenSearchConditionClause ::= 
-		whenSearchCondition:wsc  statements:stmts
+		whenSearchCondition  statements
 		{: my_parser.Builder.EndWhenSearchConditionClause(); :}
-	|	whenSearchCondition:wsc  nextSentenceStatement:ness
+	|	whenSearchCondition  nextSentenceStatement
 		{: my_parser.Builder.EndWhenSearchConditionClause(); :}
 	;
 
@@ -1346,20 +1389,20 @@ whenSearchCondition ::= WhenSearchCondition:wsc
 	{: my_parser.Builder.StartWhenSearchConditionClause(wsc); :}
 	;
 
-whenSearchConditionClauses ::= whenSearchConditionClause:wscc
+whenSearchConditionClauses ::= whenSearchConditionClause
 		{:  :}
-	|	whenSearchConditionClauses:wsccs whenSearchConditionClause:wscc
+	|	whenSearchConditionClauses whenSearchConditionClause
 		{:  :}
 	;
 
 startStatementConditional ::=
-		startStatement:stmt
+		startStatement
 		{: my_parser.Builder.EndStartStatementConditional(); :}
-	|	startStatement:stmt StartStatementEnd:end
+	|	startStatement StartStatementEnd:end
 		{: my_parser.Builder.EndStartStatementConditional(end); :}
-	|	startStatement:stmt keyConditions:conds
+	|	startStatement keyConditions
 		{: my_parser.Builder.EndStartStatementConditional(); :}
-	|	startStatement:stmt keyConditions:conds StartStatementEnd:end
+	|	startStatement keyConditions StartStatementEnd:end
 		{: my_parser.Builder.EndStartStatementConditional(end); :}
 	;
 
@@ -1368,13 +1411,13 @@ startStatement ::= StartStatement:stmt
 	;
 
 stringStatementConditional ::=
-		stringStatement:stmt
+		stringStatement
 		{: my_parser.Builder.EndStringStatementConditional(); :}
-	|	stringStatement:stmt StringStatementEnd:end
+	|	stringStatement StringStatementEnd:end
 		{: my_parser.Builder.EndStringStatementConditional(end); :}
-	|	stringStatement:stmt overflowConditions:conds
+	|	stringStatement overflowConditions
 		{: my_parser.Builder.EndStringStatementConditional(); :}
-	|	stringStatement:stmt overflowConditions:conds StringStatementEnd:end
+	|	stringStatement overflowConditions StringStatementEnd:end
 		{: my_parser.Builder.EndStringStatementConditional(end); :}
 	;
 
@@ -1383,13 +1426,13 @@ stringStatement ::= StringStatement:stmt
 	 ;
 
 subtractStatementConditional ::=
-		subtractStatement:stmt
+		subtractStatement
 		{: my_parser.Builder.EndSubtractStatementConditional(); :}
-	|	subtractStatement:stmt SubtractStatementEnd:end
+	|	subtractStatement SubtractStatementEnd:end
 		{: my_parser.Builder.EndSubtractStatementConditional(end); :}
-	|	subtractStatement:stmt sizeErrorConditions:conds
+	|	subtractStatement sizeErrorConditions
 		{: my_parser.Builder.EndSubtractStatementConditional(); :}
-	|	subtractStatement:stmt sizeErrorConditions:conds SubtractStatementEnd:end
+	|	subtractStatement sizeErrorConditions SubtractStatementEnd:end
 		{: my_parser.Builder.EndSubtractStatementConditional(end); :}
 	;
 
@@ -1398,13 +1441,13 @@ subtractStatement ::= SubtractStatement:stmt
 	;
 
 unstringStatementConditional ::=
-		unstringStatement:stmt
+		unstringStatement
 		{: my_parser.Builder.EndUnstringStatementConditional(); :}
-	|	unstringStatement:stmt UnstringStatementEnd:end
+	|	unstringStatement UnstringStatementEnd:end
 		{: my_parser.Builder.EndUnstringStatementConditional(end); :}
-	|	unstringStatement:stmt overflowConditions:conds
+	|	unstringStatement overflowConditions
 		{: my_parser.Builder.EndUnstringStatementConditional(); :}
-	|	unstringStatement:stmt overflowConditions:conds UnstringStatementEnd:end
+	|	unstringStatement overflowConditions UnstringStatementEnd:end
 		{: my_parser.Builder.EndUnstringStatementConditional(end); :}
 	;
 
@@ -1413,13 +1456,13 @@ unstringStatement ::= UnstringStatement:stmt
 	;
 
 writeStatementConditional ::=
-		writeStatement:stmt
+		writeStatement
 		{: my_parser.Builder.EndWriteStatementConditional(); :}
-	|	writeStatement:stmt WriteStatementEnd:end
+	|	writeStatement WriteStatementEnd:end
 		{: my_parser.Builder.EndWriteStatementConditional(end); :}
-	|	writeStatement:stmt rwStatementConditions:conds
+	|	writeStatement rwStatementConditions
 		{: my_parser.Builder.EndWriteStatementConditional(); :}
-	|	writeStatement:stmt rwStatementConditions:conds WriteStatementEnd:end
+	|	writeStatement rwStatementConditions WriteStatementEnd:end
 		{: my_parser.Builder.EndWriteStatementConditional(end); :}
 	;
 
@@ -1428,13 +1471,13 @@ writeStatement ::= WriteStatement:stmt
 	;
 
 xmlGenerateStatementConditional ::=
-		xmlGenerateStatement:stmt
+		xmlGenerateStatement
 		{: my_parser.Builder.EndXmlGenerateStatementConditional(); :}
-	|	xmlGenerateStatement:stmt XmlStatementEnd:end
+	|	xmlGenerateStatement XmlStatementEnd:end
 		{: my_parser.Builder.EndXmlGenerateStatementConditional(end); :}
-	|	xmlGenerateStatement:stmt exceptionConditions:conds
+	|	xmlGenerateStatement exceptionConditions
 		{: my_parser.Builder.EndXmlGenerateStatementConditional(); :}
-	|	xmlGenerateStatement:stmt exceptionConditions:conds XmlStatementEnd:end
+	|	xmlGenerateStatement exceptionConditions XmlStatementEnd:end
 		{: my_parser.Builder.EndXmlGenerateStatementConditional(end); :}
 	;
 
@@ -1443,13 +1486,13 @@ xmlGenerateStatement ::= XmlGenerateStatement:stmt
 	;
 
 xmlParseStatementConditional ::=
-		xmlParseStatement:stmt
+		xmlParseStatement
 		{: my_parser.Builder.EndXmlParseStatementConditional(); :}
-	|	xmlParseStatement:stmt XmlStatementEnd:end
+	|	xmlParseStatement XmlStatementEnd:end
 		{: my_parser.Builder.EndXmlParseStatementConditional(end); :}
-	|	xmlParseStatement:stmt exceptionConditions:conds
+	|	xmlParseStatement exceptionConditions
 		{: my_parser.Builder.EndXmlParseStatementConditional(); :}
-	|	xmlParseStatement:stmt exceptionConditions:conds XmlStatementEnd:end
+	|	xmlParseStatement exceptionConditions XmlStatementEnd:end
 		{: my_parser.Builder.EndXmlParseStatementConditional(end); :}
 	;
 
@@ -1459,7 +1502,7 @@ xmlParseStatement ::= XmlParseStatement:stmt
 
 // Conditional execution of statements
 
-onAtEnd ::= atEndCondition:cond statements:stmts
+onAtEnd ::= atEndCondition statements
 	{: my_parser.Builder.EndOnAtEnd(); :}
 	;
 
@@ -1467,7 +1510,7 @@ atEndCondition ::= AtEndCondition:cond
 	{: my_parser.Builder.StartOnAtEnd(cond); :}
 	;
 
-noAtEnd ::= notAtEndCondition:cond statements:stmts
+noAtEnd ::= notAtEndCondition statements
 	{: my_parser.Builder.EndNoAtEnd(); :}
 	;
 
@@ -1475,17 +1518,17 @@ notAtEndCondition ::= NotAtEndCondition:cond
 	{: my_parser.Builder.StartNoAtEnd(cond); :}
 	;
 
-endConditions ::= onAtEnd:at
+endConditions ::= onAtEnd
 	{:  :}
-	| noAtEnd:no_at
+	| noAtEnd
 	{:  :}
-	| endConditions:econds onAtEnd:at
+	| endConditions onAtEnd
 	{:  :}
-	| endConditions:econds noAtEnd:no_at
+	| endConditions noAtEnd
 	{:  :}
 	;
 
-onException ::= onExceptionCondition:cond statements:stmts
+onException ::= onExceptionCondition statements
 	{: my_parser.Builder.EndOnException(); :}
 	;
 
@@ -1493,7 +1536,7 @@ onExceptionCondition ::= OnExceptionCondition:cond
 	{: my_parser.Builder.StartOnException(cond); :}
 	;
 
-noException ::= notOnExceptionCondition:cond statements:stmts
+noException ::= notOnExceptionCondition statements
 	{: my_parser.Builder.EndNoException(); :}
 	;
 
@@ -1501,18 +1544,18 @@ notOnExceptionCondition ::= NotOnExceptionCondition:cond
 	{: my_parser.Builder.StartNoException(cond); :}
 	;
 
-exceptionConditions ::= onException:on
+exceptionConditions ::= onException
 	{:  :}
-	| noException:not_on
+	| noException
 	{:  :}
-	| exceptionConditions:econds onException:on
+	| exceptionConditions onException
 	{:  :}
-	| exceptionConditions:econds noException:not_on
+	| exceptionConditions noException
 	{:  :}
 	;
 
 
-onInvalidKey ::= invalidKeyCondition:cond statements:stmts
+onInvalidKey ::= invalidKeyCondition statements
 	{: my_parser.Builder.EndOnInvalidKey(); :}
 	;
 
@@ -1520,7 +1563,7 @@ invalidKeyCondition ::= InvalidKeyCondition:cond
 	{: my_parser.Builder.StartOnInvalidKey(cond); :}
 	;
 
-noInvalidKey ::= notInvalidKeyCondition:cond statements:stmts
+noInvalidKey ::= notInvalidKeyCondition statements
 	{: my_parser.Builder.EndNoInvalidKey(); :}
 	;
 
@@ -1528,24 +1571,24 @@ notInvalidKeyCondition ::= NotInvalidKeyCondition:cond
 	{: my_parser.Builder.StartNoInvalidKey(cond); :}
 	;
 
-keyConditions ::= onInvalidKey:invalid
+keyConditions ::= onInvalidKey
 	{:  :}
-	| noInvalidKey:not_invalid
+	| noInvalidKey
 	{:  :}
-	| keyConditions:kconds onInvalidKey:valid
+	| keyConditions onInvalidKey
 	{:  :}
-	| keyConditions:kconds noInvalidKey:not_invalid
+	| keyConditions noInvalidKey
 	{:  :}
 	;
 
-onOverflow ::= onOverflowCondition:cond statements:stmts
+onOverflow ::= onOverflowCondition statements
 	{: my_parser.Builder.EndOnOverflow(); :}
 	;
 onOverflowCondition ::= OnOverflowCondition:cond 
 	{: my_parser.Builder.StartOnOverflow(cond); :}
 	;
 
-noOverflow ::= notOnOverflowCondition:cond statements:stmts
+noOverflow ::= notOnOverflowCondition statements
 	{: my_parser.Builder.EndNoOverflow(); :}
 	;
 
@@ -1553,24 +1596,24 @@ notOnOverflowCondition ::= NotOnOverflowCondition:cond
 	{: my_parser.Builder.StartNoOverflow(cond); :}
 	;
 
-overflowConditions ::= onOverflow:on
+overflowConditions ::= onOverflow
 	{:  :}
-	| noOverflow:not_on
+	| noOverflow
 	{:  :}
-	| overflowConditions:oconds onOverflow:on
+	| overflowConditions onOverflow
 	{:  :}
-	| overflowConditions:oconds noOverflow:not_on
+	| overflowConditions noOverflow
 	{:  :}
 	;
 
-onSizeError ::= onSizeErrorCondition:cond statements:stmts
+onSizeError ::= onSizeErrorCondition statements
 	{:  my_parser.Builder.EndOnSizeError(); :}
 	;
 onSizeErrorCondition ::= OnSizeErrorCondition:cond 
 	{: my_parser.Builder.StartOnSizeError(cond); :}
 	;
 
-noSizeError ::= notOnSizeErrorCondition:cond statements:stmts
+noSizeError ::= notOnSizeErrorCondition statements
 	{:  my_parser.Builder.EndNoSizeError(); :}
 	;
 
@@ -1579,12 +1622,12 @@ notOnSizeErrorCondition ::= NotOnSizeErrorCondition:cond
 	;
 
 sizeErrorConditions ::= 
-	  onSizeError:on
+	  onSizeError
 		{: :}
-	| noSizeError:not_on
+	| noSizeError
 		{: :}
-	| sizeErrorConditions:seconds onSizeError:on
+	| sizeErrorConditions onSizeError
 		{: :}
-	| sizeErrorConditions:seconds noSizeError:not_on
+	| sizeErrorConditions noSizeError
 		{: :}
 	;

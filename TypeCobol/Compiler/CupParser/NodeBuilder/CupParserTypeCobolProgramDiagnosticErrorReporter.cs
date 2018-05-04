@@ -45,8 +45,33 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
             return true;
         }
 
+        /// <summary>
+        /// Create a new parser using a clone.
+        /// </summary>
+        /// <param name="parser">The parser to be cloned</param>
+        /// <param name="start">The start entry point to use</param>
+        /// <param name="firstSymbol">The First Symbol</param>
+        /// <param name="trial">If we are creating atrial parser, fals eo therwise</param>
+        /// <returns>The new parser</returns>
+        public lr_parser CloneParser(lr_parser parser, int start, CodeElement firstSymbol, bool trial)
+        {
+            TypeCobolProgramParser tcpParser = parser as TypeCobolProgramParser;
+            ProgramClassBuilder builder = tcpParser.Builder as ProgramClassBuilder;
+            var errorReporter = tcpParser.ErrorReporter;
+            var tokenizer = parser.getScanner() as CodeElementTokenizer;
+            CodeElementTokenizer newTokenizer = new CodeElementTokenizer(start, firstSymbol);
+            TypeCobolProgramParser newParser = new TypeCobolProgramParser(newTokenizer);
+            newParser.Builder = builder;
+            newParser.ErrorReporter = errorReporter;
+            newParser.IsTrial = trial;            
+            return newParser;
+        }
+
         public bool SyntaxError(lr_parser parser, Symbol curToken)
         {
+            TypeCobolProgramParser tcpParser = parser as TypeCobolProgramParser;
+            if (tcpParser.IsTrial)
+                return true;
             List<string> expected = ExpectedSymbols(parser, curToken);
             string symName = CodeElementTokenizer.CupTokenToString(curToken.sym);
             string text = (curToken.value as CodeElement).Text;
@@ -54,6 +79,20 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
             System.Diagnostics.Debug.WriteLine(msg);
             CupParserDiagnostic diagnostic = new CupParserDiagnostic(msg, curToken, null);
             AddDiagnostic(diagnostic);
+            //Try to add the last encountered statement in the stack if it is not already entered. 
+            System.Collections.Stack stack = tcpParser.getParserStack();
+            object[] items = stack.ToArray();
+            foreach (var item in items)
+            {
+                Symbol symbol = item as Symbol;
+                if (symbol.value is StatementElement)
+                {
+                    lr_parser stmtParser = CloneParser(parser, (int)TypeCobolProgramSymbols.StatementEntryPoint,
+                        symbol.value as CodeElement, true);
+                    stmtParser.parse();
+                    break;
+                }
+            }
             return true;
         }
 
@@ -77,10 +116,13 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
             for (int probe = 0; probe < row.Length; probe++)
             {
                 int tag = row[probe++];
-                if (tag != -1)
+                if (tag != -1 && tag != parser.error_sym())
                 {//symbol tag different of the default symbol.
                     string name = CodeElementTokenizer.CupTokenToString(tag);
-                    expected.Add(name);
+                    if (name != null)
+                    {
+                        expected.Add(name);
+                    }
                 }
             }
             return expected;
@@ -132,7 +174,7 @@ namespace TypeCobol.Compiler.CupParser.NodeBuilder
             if (ruleStack != null) str.Append(" RuleStack=" + ruleStack + ", ");
             if (OffendingSymbol != null)
             {
-                str.Append(" OffendingSymbol=").Append(OffendingSymbol);
+                str.Append(" OffendingSymbol=").Append(OffendingSymbol.value);
                 var importedToken = OffendingSymbol.value as ImportedToken;
                 if (importedToken != null)
                 {
